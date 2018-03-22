@@ -2,7 +2,7 @@ import collections
 
 import numpy as np
 
-UNK="UNK"
+UNK = "UNK"
 
 ### generate_batch ###
 # This function generates the train data and label batch from the dataset.
