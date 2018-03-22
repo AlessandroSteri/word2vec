@@ -7,6 +7,7 @@ from tensorboard.plugins import projector
 from data_preprocessing import generate_batch, build_dataset, save_vectors, read_analogies
 from evaluation import evaluation
 
+
 # run on CPU
 # comment this part if you want to run it on GPU
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
@@ -19,6 +20,9 @@ EMBEDDING_SIZE = 128 # Dimension of the embedding vector.
 WINDOW_SIZE = 1  # How many words to consider left and right.
 NEG_SAMPLES = 64  # Number of negative examples to sample.
 VOCABULARY_SIZE = 50000 #The most N word to consider in the dictionary
+
+# TODO my parameter
+NUM_DOMAIN_WORDS = 10000 # was 1000
 
 TRAIN_DIR = "dataset/DATA/TRAIN"
 VALID_DIR = "dataset/DATA/DEV"
@@ -49,7 +53,7 @@ def read_data(directory, domain_words=-1):
     return data
 
 # load the training set
-raw_data = read_data(TRAIN_DIR, domain_words=1000)
+raw_data = read_data(TRAIN_DIR, domain_words=NUM_DOMAIN_WORDS)
 print('Data size', len(raw_data))
 # the portion of the training set used for data evaluation
 valid_size = 16  # Random set of words to evaluate similarity on.

@@ -33,17 +33,17 @@ def generate_batch(batch_size, curr_batch, window_size, data):
                 full_train_data.append(x)
                 full_labels.append(y)
 
-    print("full_train_data: {}".format(len(full_train_data)))
-    print("full_labels: {}".format(len(full_labels)))
+    # print("full_train_data: {}".format(len(full_train_data)))
+    # print("full_labels: {}".format(len(full_labels)))
 
     batch_start_index = batch_size*curr_batch
-    print("batch_start_index {}".format(batch_start_index))
+    # print("batch_start_index {}".format(batch_start_index))
     batch_end_index   = (batch_size*curr_batch) + batch_size
-    print("batch_end_index {}".format(batch_end_index))
+    # print("batch_end_index {}".format(batch_end_index))
     train_data        = full_train_data[batch_start_index:batch_end_index]
     labels            = full_labels[batch_start_index:batch_end_index]
-    print("train_data: {}".format(train_data))
-    print("labels: {}".format(labels))
+    # print("train_data: {}".format(train_data))
+    # print("labels: {}".format(labels))
 
 
     # data_len = len(data)
@@ -74,7 +74,7 @@ def generate_batch(batch_size, curr_batch, window_size, data):
     train_data = np.asarray(train_data)
     labels = np.asarray(labels) #.reshape(batch_size,1)
 
-    print("Train data shape: {}".format(train_data.shape))
+    # print("Train data shape: {}".format(train_data.shape))
 
     return train_data, labels
 
@@ -109,11 +109,11 @@ def build_dataset(words, vocab_size):
             # NB data will also skip those
             continue
         vocab[w] += 1
-    print("Distinct words: ", len(vocab))
+    # print("Distinct words: ", len(vocab))
     #TODO: taken from course slides^
 
     # Is a bias the fact that we follow the most common word order?
-    for index, word_occurrency in enumerate(vocab.most_common(vocab_size-2)):
+    for index, word_occurrency in enumerate(vocab.most_common(vocab_size-1)):
         # vocab_size -1 to leave one spot for UNK
 
         common_word, _ = word_occurrency
