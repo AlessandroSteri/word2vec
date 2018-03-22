@@ -20,27 +20,61 @@ def generate_batch(batch_size, curr_batch, window_size, data):
     labels = None
 
     ###FILL HERE###
-
-    data_len = len(data)
-    # curr_batch ranges from 0 to num_step-1
-    start = (curr_batch * batch_size) % data_len  # start is included in this batch
-
-    # catch for current batch from data (as circular buffer)
-    batch = []
-    for i in range(batch_size):
-        # i = 0...batch_size-1
-        index = (start + i) % data_len
-        batch.append(data[index])
-
-    train_data = []
-    labels = []
+    # make more elegant
+    full_train_data = []
+    full_labels = []
     # TODO: taken from slides
-    for word_index, word in enumerate(batch):
-        for nb_word in batch[max(word_index - window_size, 0): min(word_index + window_size, len(batch)) + 1]:
+    for word_index, word in enumerate(data):
+        for nb_word in data[max(word_index - window_size, 0): min(word_index +
+                                                                   window_size,
+                                                                   len(data)) + 1]:
             if nb_word != word:
                 x, y = skip_gram(word, nb_word)
-                train_data.append(x)
-                labels.append(y)
+                full_train_data.append(x)
+                full_labels.append(y)
+
+    print("full_train_data: {}".format(len(full_train_data)))
+    print("full_labels: {}".format(len(full_labels)))
+
+    batch_start_index = batch_size*curr_batch
+    print("batch_start_index {}".format(batch_start_index))
+    batch_end_index   = (batch_size*curr_batch) + batch_size
+    print("batch_end_index {}".format(batch_end_index))
+    train_data        = full_train_data[batch_start_index:batch_end_index]
+    labels            = full_labels[batch_start_index:batch_end_index]
+    print("train_data: {}".format(train_data))
+    print("labels: {}".format(labels))
+
+
+    # data_len = len(data)
+    # # curr_batch ranges from 0 to num_step-1
+    # start = (curr_batch * batch_size) % data_len  # start is included in this batch
+    #
+    # # catch for current batch from data (as circular buffer)
+    # batch = []
+    # for i in range(batch_size):
+    #     # i = 0...batch_size-1
+    #     index = (start + i) % data_len
+    #     batch.append(data[index])
+    #
+    # train_data = []
+    # labels = []
+    # # TODO: taken from slides
+    # for word_index, word in enumerate(batch):
+    #     for nb_word in batch[max(word_index - window_size, 0): min(word_index + window_size, len(batch)) + 1]:
+    #         if nb_word != word:
+    #             x, y = skip_gram(word, nb_word)
+    #             train_data.append(x)
+    #             labels.append(y)
+    #
+    # print("Train data len: {}".format(len(train_data)))
+    # train_data = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 ]
+    # labels = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 ]
+
+    train_data = np.asarray(train_data)
+    labels = np.asarray(labels) #.reshape(batch_size,1)
+
+    print("Train data shape: {}".format(train_data.shape))
 
     return train_data, labels
 
@@ -79,18 +113,18 @@ def build_dataset(words, vocab_size):
     #TODO: taken from course slides^
 
     # Is a bias the fact that we follow the most common word order?
-    for index, word_occurrency in enumerate(vocab.most_common(vocab_size-1)):
+    for index, word_occurrency in enumerate(vocab.most_common(vocab_size-2)):
         # vocab_size -1 to leave one spot for UNK
 
         common_word, _ = word_occurrency
-        print("Index: {}, word: {}".format(index, common_word))
+        # print("Index: {}, word: {}".format(index, common_word))
 
         dictionary[common_word] = index
         reversed_dictionary[index] = common_word
 
     # Handling less frequent words as UNK
-    dictionary[UNK] = vocab_size
-    reversed_dictionary[vocab_size] = UNK
+    dictionary[UNK] = vocab_size-1
+    reversed_dictionary[vocab_size-1] = UNK
     #TODO: double check if UNK is out of one
 
 
@@ -158,6 +192,6 @@ def cbow(word, nb_word):
     return nb_word, word
 
 
-def negative_sample(num_negative, word, dictionary):
-    pass
+# def negative_sample(num_negative, word, dictionary):
+    # pass
 

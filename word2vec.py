@@ -73,22 +73,40 @@ with graph.as_default():
     # Define input data tensors.
     with tf.name_scope('inputs'):
         train_inputs = tf.placeholder(tf.int32, shape=[BATCH_SIZE])
-        train_labels = tf.placeholder(tf.int32, shape=[BATCH_SIZE, 1])
+        train_labels = tf.placeholder(tf.int32, shape=[BATCH_SIZE]) #, 1])
         valid_dataset = tf.constant(valid_examples, dtype=tf.int32)
 
-    ### FILL HERE ###
-    embeddings = tf.Variable() #placeholder variable
-    ### FILL HERE ###
+    ### FILL HERE ###{{{
+
+    ### }}}
+    # TODO: taken from slides
+    embeddings = tf.Variable(tf.random_normal([VOCABULARY_SIZE, EMBEDDING_SIZE]))
+    # ^ was embeddings = tf.Variable() #placeholder variable
+    # emb_bias = tf.Variable(tf.random_normal(EMBEDDING_SIZE)) #placeholder variable
+    ### FILL HERE ###{{{
+    # TODO: taken from slides
+    # selects column from index instead of product
+    hidden_representation = tf.nn.embedding_lookup(embeddings, train_inputs)
+    W2 = tf.Variable(tf.random_normal([EMBEDDING_SIZE, VOCABULARY_SIZE]))
+    output = tf.matmul(hidden_representation, W2)
+
+
+
+    ### }}}
 
     with tf.name_scope('loss'):
-        loss = None ### FILL HERE ###
+        # TODO: taken from slides
+        # was: loss = None ### FILL HERE ###
+        loss = tf.losses.sparse_softmax_cross_entropy(train_labels, output)
 
         # Add the loss value as a scalar to summary.
     tf.summary.scalar('loss', loss)
 
     # Construct the SGD optimizer using a learning rate of 1.0.
     with tf.name_scope('optimizer'):
-        optimizer = None ###FILL HERE ###
+        # TODO: taken from slides
+        # was: optimizer = None ###FILL HERE ###
+        optimizer = tf.train.AdamOptimizer(2).minimize(loss)
 
     # Compute the cosine similarity between minibatch examples and all embeddings.
     norm = tf.sqrt(tf.reduce_sum(tf.square(embeddings), 1, keep_dims=True))
