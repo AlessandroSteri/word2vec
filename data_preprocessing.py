@@ -157,3 +157,7 @@ def skip_gram(word, nb_word):
 def cbow(word, nb_word):
     return nb_word, word
 
+
+def negative_sample(num_negative, word, dictionary):
+    pass
+
