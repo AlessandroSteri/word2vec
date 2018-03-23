@@ -6,8 +6,12 @@ import nltk
 import csv
 import string
 
+from time import time
+
 UNK = "<UNK>"
 
+batch_time = 0
+batch_index = 0
 ### generate_batch ###
 # This function generates the train data and label batch from the dataset.
 #
@@ -20,32 +24,44 @@ UNK = "<UNK>"
 # train_data: train data for current batch
 # labels: labels for current batch
 def generate_batch(batch_size, curr_batch, window_size, data):
-    train_data = None
-    labels = None
+    train_data = []
+    labels = []
 
     ###FILL HERE###
+    global batch_time
+    global batch_index
+    start = time()
     # make more elegant
-    full_train_data = []
-    full_labels = []
+    # full_train_data = []
+    # full_labels = []
     # TODO: taken from slides
-    for word_index, word in enumerate(data):
-        for nb_word in data[max(word_index - window_size, 0): min(word_index +
-                                                                   window_size,
-                                                                   len(data)) + 1]:
-            if nb_word != word:
-                x, y = skip_gram(word, nb_word)
-                full_train_data.append(x)
-                full_labels.append(y)
+    # for word_index, pivot_word in enumerate(data[batch_index:]):
+    for pivot_word in data[batch_index:]:
+        batch_index = batch_index + 1 % len(data)
+        window = data[max(batch_index - window_size, 0):]
+        window = window[:min(batch_index + window_size, len(data)) +1]
+        if len(train_data) >= batch_size:
+            break
+        for context_word in window:
+            if len(train_data) >= batch_size:
+                break
+            #data[max(batch_index - window_size, 0): min(batch_index +
+            #                                    window_size,
+            #                                    len(data)) + 1]:
+            if context_word != pivot_word:
+                # x, y = skip_gram(pivot_word, context_word)
+                train_data.append(pivot_word)
+                labels.append(context_word)
 
     # print("full_train_data: {}".format(len(full_train_data)))
     # print("full_labels: {}".format(len(full_labels)))
 
-    batch_start_index = batch_size*curr_batch
+    # batch_start_index = batch_size*curr_batch
     # print("batch_start_index {}".format(batch_start_index))
-    batch_end_index   = (batch_size*curr_batch) + batch_size
+    # batch_end_index   = (batch_size*curr_batch) + batch_size
     # print("batch_end_index {}".format(batch_end_index))
-    train_data        = full_train_data[batch_start_index:batch_end_index]
-    labels            = full_labels[batch_start_index:batch_end_index]
+    # train_data        = full_train_data[batch_start_index:batch_end_index]
+    # labels            = full_labels[batch_start_index:batch_end_index]
     # print("train_data: {}".format(train_data))
     # print("labels: {}".format(labels))
 
@@ -80,6 +96,10 @@ def generate_batch(batch_size, curr_batch, window_size, data):
 
     # print("Train data shape: {}".format(train_data.shape))
 
+    stop = time()
+    dur = stop - start
+    batch_time += dur
+    print('time spent in bacth: {}'.format(batch_time))
     return train_data, labels
 
 ### build_dataset ###
@@ -115,14 +135,14 @@ def build_dataset(words, vocab_size):
             continue
         if '\\' in w:
             # remove wiki markdown
-            print('[build_dataset] Word with \ : {}'.format(w))
+            # print('[build_dataset] Word with \ : {}'.format(w))
             continue
         if any(c.isdigit() for c in w):
-            print('[build_dataset] Word with digit: {}'.format(w))
+            # print('[build_dataset] Word with digit: {}'.format(w))
             continue
         if len(w) <= 2:
             # remove most of stop words, remove also up which is ineresting
-            print('[build_dataset] Word with less than 2: {}'.format(w))
+            # print('[build_dataset] Word with less than 2: {}'.format(w))
             continue
 
         char_to_take_of = set(string.punctuation)
