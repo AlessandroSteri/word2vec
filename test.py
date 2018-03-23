@@ -1,7 +1,8 @@
 import numpy as np
+import os
 # from data_preprocessing import get_stopwords
 # from data_preprocessing import build_dataset
-from word2vec import read_data
+# from word2vec import read_data
 # from word2vec import TRAIN_DIR
 from data_preprocessing import build_dataset
 from data_preprocessing import generate_batch
@@ -9,6 +10,24 @@ from data_preprocessing import generate_batch
 VOCABULARY_SIZE = 50000
 
 print('TEST')
+
+def read_data(directory, domain_words=-1):
+    data = []
+    for domain in os.listdir(directory):
+    #for dirpath, dnames, fnames in os.walk(directory):
+        limit = domain_words
+        for f in os.listdir(os.path.join(directory, domain)):
+            if f.endswith(".txt"):
+                with open(os.path.join(directory, domain, f)) as file:
+                    for line in file.readlines():
+                        split = line.lower().strip().split()
+                        if limit > 0 and limit - len(split) < 0:
+                            split = split[:limit]
+                        else:
+                            limit -= len(split)
+                        if limit >= 0 or limit == -1:
+                            data += split
+    return data
 
 raw_data = read_data("dataset/DATA/TRAIN", domain_words=1)
 
@@ -36,7 +55,6 @@ data, dictionary, reverse_dictionary = build_dataset(raw_data, VOCABULARY_SIZE)
 # for w in WORDS[10:15]:
 #     print('hi' + w)
 
-DATA = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 x_train, y_train = generate_batch(10, 1, 2, DATA)
 
 print("DATA:")
