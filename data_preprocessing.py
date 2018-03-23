@@ -164,7 +164,8 @@ def build_dataset(words, vocab_size):
     # print("Distinct words: ", len(vocab))
     #TODO: taken from course slides^
     # TODO: taken from stackoverflow
-    with open('vocab.csv','w') as csvfile:
+    file_name = time.time.strftime('%Y%m%d-%H%M%S') + '- vocabulary' + '.csv'
+    with open('file_name','w') as csvfile:
         fieldnames=['word','occur']
         writer=csv.writer(csvfile)
         writer.writerow(fieldnames)
@@ -199,8 +200,11 @@ def build_dataset(words, vocab_size):
 def save_vectors(vectors):
 
     ###FILL HERE###
+    file_name = time.time.strftime('%Y%m%d-%H%M%S') + ' - embedding' + '.csv'
     print(vectors)
     print(vectors.shape)
+    print(vectors[1].shape)
+    np.savetxt(file_name, vectors, delimiter=',')
 
     pass
 
