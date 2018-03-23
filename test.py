@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import nltk
 # from data_preprocessing import get_stopwords
 # from data_preprocessing import build_dataset
 # from word2vec import read_data
@@ -11,6 +12,7 @@ VOCABULARY_SIZE = 50000
 
 print('TEST')
 
+# nltk.download()
 def read_data(directory, domain_words=-1):
     data = []
     for domain in os.listdir(directory):
@@ -29,8 +31,9 @@ def read_data(directory, domain_words=-1):
                             data += split
     return data
 
-raw_data = read_data("dataset/DATA/TRAIN", domain_words=1)
+raw_data = read_data("dataset/DATA/TRAIN", domain_words=-1)
 
+print ( nltk.sent_tokenize(raw_data, language='english') )
 # WORDS = ['the', 'barometric', 'formula,', 'sometimes', 'called', 'the',
 #          'exponential', 'atmosphere', 'or', 'isothermal', 'atmosphere,', 'is',
 #          'a', 'formula', 'used', 'to', 'model', 'how', 'the', 'pressure', '(or',
@@ -44,33 +47,33 @@ raw_data = read_data("dataset/DATA/TRAIN", domain_words=1)
 #          'zero.']
 #
 
-data, dictionary, reverse_dictionary = build_dataset(raw_data, VOCABULARY_SIZE)
-
-# DATA, dictionary, reverse_dictionary = build_dataset(WORDS, VOCABULARY_SIZE)
+# data, dictionary, reverse_dictionary = build_dataset(raw_data, VOCABULARY_SIZE)
+#
+# # DATA, dictionary, reverse_dictionary = build_dataset(WORDS, VOCABULARY_SIZE)
+# #
+# #
+# # print(WORDS[10])
+# # print(WORDS[15])
+# # print(len(WORDS))
+# # for w in WORDS[10:15]:
+# #     print('hi' + w)
+#
+# x_train, y_train = generate_batch(10, 1, 2, DATA)
+#
+# print("DATA:")
+# print(DATA)
+# print("x_train:")
+# print(x_train)
+# print("y_train:")
+# print(y_train)
+#
+# # convert them to numpy arrays
+# x_train = np.asarray(x_train)
+# y_train = np.asarray(y_train)
+#
+# print('x_train shape', x_train.shape, '\n'
+#       'y_train_shape', y_train.shape)
 #
 #
-# print(WORDS[10])
-# print(WORDS[15])
-# print(len(WORDS))
-# for w in WORDS[10:15]:
-#     print('hi' + w)
-
-x_train, y_train = generate_batch(10, 1, 2, DATA)
-
-print("DATA:")
-print(DATA)
-print("x_train:")
-print(x_train)
-print("y_train:")
-print(y_train)
-
-# convert them to numpy arrays
-x_train = np.asarray(x_train)
-y_train = np.asarray(y_train)
-
-print('x_train shape', x_train.shape, '\n'
-      'y_train_shape', y_train.shape)
-
-
-
-
+#
+#

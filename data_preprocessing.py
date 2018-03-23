@@ -2,7 +2,9 @@ import collections
 
 import numpy as np
 
+import nltk
 import csv
+import string
 
 UNK = "<UNK>"
 
@@ -106,11 +108,39 @@ def build_dataset(words, vocab_size):
     stopwords = get_stopwords('./stopwords.txt')
     vocab = collections.Counter()
 
+    # tokenizer = nltk.tokenizer.casual.casual
     for w in words:
         if w == '' or w in stopwords:
             # NB data will also skip those
             continue
-        vocab[w] += 1
+        if '\\' in w:
+            # remove wiki markdown
+            print('[build_dataset] Word with \ : {}'.format(w))
+            continue
+        if any(c.isdigit() for c in w):
+            print('[build_dataset] Word with digit: {}'.format(w))
+            continue
+        if len(w) <= 2:
+            # remove most of stop words, remove also up which is ineresting
+            print('[build_dataset] Word with less than 2: {}'.format(w))
+            continue
+
+        char_to_take_of = set(string.punctuation)
+        # allow word like new york
+        # TODO: remove -.
+        # char_to_take_of.pop('-')
+        # allow u.s.a.
+        # char_to_take_of.pop('.')
+        w_no_char = "".join(char for char in w if char not in char_to_take_of)
+        if '..' not in w_no_char:
+            w_no_char =  w_no_char.rstrip('-.').lstrip('-.')
+        else:
+            # preserving acronyms
+            w_no_char =  w_no_char.rstrip('-').lstrip('-')
+            w_no_char = w_no_char.replace('..', '.')
+
+
+        vocab[w_no_char] += 1
     # print("Distinct words: ", len(vocab))
     #TODO: taken from course slides^
     # TODO: taken from stackoverflow
@@ -188,8 +218,10 @@ def apply_dictionary(x_list, dictionary, unk_key):
         y = None
         try:
             y = dictionary[x]
+            # y_list.append(y)
         except KeyError:
             y = dictionary[unk_key]
+
         y_list.append(y)
     return y_list
 

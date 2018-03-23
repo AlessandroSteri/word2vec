@@ -15,15 +15,15 @@ from evaluation import evaluation
 
 ### PARAMETERS ###
 
-BATCH_SIZE = 32 #*2*2*2*2 #Number of samples per batch
-EMBEDDING_SIZE = 128 # Dimension of the embedding vector.
-WINDOW_SIZE = 4  # How many words to consider left and right.
+BATCH_SIZE = 128 #*2*2*2*2 #Number of samples per batch
+EMBEDDING_SIZE = 128 #128 # Dimension of the embedding vector.
+WINDOW_SIZE = 1  # How many words to consider left and right.
 NEG_SAMPLES = 64  # Number of negative examples to sample.
-VOCABULARY_SIZE = 50000 #The most N word to consider in the dictionary
+VOCABULARY_SIZE = 15000 #The most N word to consider in the dictionary
 
 # TODO my parameter
-NUM_DOMAIN_WORDS = 10000 # was 1000
-STEP_NUM = 10000
+NUM_DOMAIN_WORDS = 1000000 # was 1000
+STEP_NUM = 100001
 STEP_CHECK = 10
 
 TRAIN_DIR = "dataset/DATA/TRAIN"
@@ -137,7 +137,8 @@ with graph.as_default():
 # Step 5: Begin training.
 num_steps =  STEP_NUM
 
-with tf.Session(graph=graph, config=tf.ConfigProto(log_device_placement=True)) as session:
+with tf.Session(graph=graph) as session:
+#, config=tf.ConfigProto(log_device_placement=True)) as session:
     # Open a writer to write summaries.
     writer = tf.summary.FileWriter(TMP_DIR, session.graph)
     # We must initialize all variables before we use them.
@@ -167,7 +168,7 @@ with tf.Session(graph=graph, config=tf.ConfigProto(log_device_placement=True)) a
         # Add returned summaries to writer in each step.
         writer.add_summary(summary, step)
         # Add metadata to visualize the graph for the last run.
-        if step % STEP_CHECK == 0:
+        if step % 10*STEP_CHECK == 0:
             sim = similarity.eval()
             for i in range(valid_size):
                 valid_word = reverse_dictionary[valid_examples[i]]
