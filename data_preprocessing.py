@@ -2,6 +2,8 @@ import collections
 
 import numpy as np
 
+import csv
+
 UNK = "<UNK>"
 
 ### generate_batch ###
@@ -111,7 +113,14 @@ def build_dataset(words, vocab_size):
         vocab[w] += 1
     # print("Distinct words: ", len(vocab))
     #TODO: taken from course slides^
+    # TODO: taken from stackoverflow
+    with open('vocab.csv','w') as csvfile:
+        fieldnames=['word','occur']
+        writer=csv.writer(csvfile)
+        writer.writerow(fieldnames)
+        for key, value in enumerate(vocab.most_common(vocab_size-1)):
 
+            writer.writerow([value[0], value[1]])
     # Is a bias the fact that we follow the most common word order?
     for index, word_occurrency in enumerate(vocab.most_common(vocab_size-1)):
         # vocab_size -1 to leave one spot for UNK

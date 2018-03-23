@@ -10,12 +10,12 @@ from evaluation import evaluation
 
 # run on CPU
 # comment this part if you want to run it on GPU
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
-os.environ["CUDA_VISIBLE_DEVICES"] = ""
+# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
+# os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 ### PARAMETERS ###
 
-BATCH_SIZE = 32*2*2*2*2 #Number of samples per batch
+BATCH_SIZE = 32 #*2*2*2*2 #Number of samples per batch
 EMBEDDING_SIZE = 128 # Dimension of the embedding vector.
 WINDOW_SIZE = 4  # How many words to consider left and right.
 NEG_SAMPLES = 64  # Number of negative examples to sample.
@@ -23,6 +23,8 @@ VOCABULARY_SIZE = 50000 #The most N word to consider in the dictionary
 
 # TODO my parameter
 NUM_DOMAIN_WORDS = 10000 # was 1000
+STEP_NUM = 10000
+STEP_CHECK = 10
 
 TRAIN_DIR = "dataset/DATA/TRAIN"
 VALID_DIR = "dataset/DATA/DEV"
@@ -110,7 +112,7 @@ with graph.as_default():
     with tf.name_scope('optimizer'):
         # TODO: taken from slides
         # was: optimizer = None ###FILL HERE ###
-        optimizer = tf.train.GradientDescentOptimizer(0.3).minimize(loss)
+        optimizer = tf.train.GradientDescentOptimizer(0.1).minimize(loss)
 
     # Compute the cosine similarity between minibatch examples and all embeddings.
     norm = tf.sqrt(tf.reduce_sum(tf.square(embeddings), 1, keep_dims=True))
@@ -133,7 +135,7 @@ with graph.as_default():
 ### TRAINING ###
 
 # Step 5: Begin training.
-num_steps = 1000
+num_steps =  STEP_NUM
 
 with tf.Session(graph=graph, config=tf.ConfigProto(log_device_placement=True)) as session:
     # Open a writer to write summaries.
@@ -148,8 +150,8 @@ with tf.Session(graph=graph, config=tf.ConfigProto(log_device_placement=True)) a
         batch_inputs, batch_labels = generate_batch(BATCH_SIZE, step, WINDOW_SIZE, data)
 
         ### {{{
-        for x, y in zip(batch_inputs, batch_labels):
-            print("[ {}, {} ]".format(reverse_dictionary[x],reverse_dictionary[y]))
+        # for x, y in zip(batch_inputs, batch_labels):
+            # print("[ {}, {} ]".format(reverse_dictionary[x],reverse_dictionary[y]))
         ### }}}
 
         # Define metadata variable.
@@ -165,7 +167,7 @@ with tf.Session(graph=graph, config=tf.ConfigProto(log_device_placement=True)) a
         # Add returned summaries to writer in each step.
         writer.add_summary(summary, step)
         # Add metadata to visualize the graph for the last run.
-        if step % 1000 == 0:
+        if step % STEP_CHECK == 0:
             sim = similarity.eval()
             for i in range(valid_size):
                 valid_word = reverse_dictionary[valid_examples[i]]
@@ -178,7 +180,7 @@ with tf.Session(graph=graph, config=tf.ConfigProto(log_device_placement=True)) a
                 print(log_str)
         if step == (num_steps - 1):
             writer.add_run_metadata(run_metadata, 'step%d' % step)
-        if step % 10 is 0:
+        if step % STEP_CHECK is 0:
             eval.eval(session)
             print("avg loss: "+str(average_loss/step))
     final_embeddings = normalized_embeddings.eval()
