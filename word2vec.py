@@ -23,7 +23,7 @@ VOCABULARY_SIZE = 15000 #The most N word to consider in the dictionary
 
 # TODO my parameter
 NUM_DOMAIN_WORDS = 1000000 # was 1000
-STEP_NUM = 100001
+STEP_NUM = 1 #000
 STEP_CHECK = 10
 
 TRAIN_DIR = "dataset/DATA/TRAIN"
@@ -112,7 +112,7 @@ with graph.as_default():
     with tf.name_scope('optimizer'):
         # TODO: taken from slides
         # was: optimizer = None ###FILL HERE ###
-        optimizer = tf.train.GradientDescentOptimizer(0.1).minimize(loss)
+        optimizer = tf.train.GradientDescentOptimizer(0.5).minimize(loss)
 
     # Compute the cosine similarity between minibatch examples and all embeddings.
     norm = tf.sqrt(tf.reduce_sum(tf.square(embeddings), 1, keep_dims=True))

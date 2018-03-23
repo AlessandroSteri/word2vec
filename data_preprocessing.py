@@ -125,7 +125,7 @@ def build_dataset(words, vocab_size):
     ###FILL HERE###
 
     #TODO: taken from course slides:
-    stopwords = get_stopwords('./stopwords.txt')
+    stopwords = get_stopwords('./stopwords2.txt')
     vocab = collections.Counter()
 
     # tokenizer = nltk.tokenizer.casual.casual
@@ -199,6 +199,8 @@ def build_dataset(words, vocab_size):
 def save_vectors(vectors):
 
     ###FILL HERE###
+    print(vectors)
+    print(vectors.shape)
 
     pass
 
