@@ -1,6 +1,7 @@
 import collections
 
 import numpy as np
+import datetime
 
 import nltk
 import csv
@@ -164,7 +165,8 @@ def build_dataset(words, vocab_size):
     # print("Distinct words: ", len(vocab))
     #TODO: taken from course slides^
     # TODO: taken from stackoverflow
-    file_name = time.time.strftime('%Y%m%d-%H%M%S') + '- vocabulary' + '.csv'
+    file_name = str(datetime.datetime.now().date()) + '_' + str(datetime.datetime.now().time()).replace(':', '.')
+    # file_name = time.time.strftime('%Y%m%d-%H%M%S') + '- vocabulary' + '.csv'
     with open('file_name','w') as csvfile:
         fieldnames=['word','occur']
         writer=csv.writer(csvfile)
@@ -200,7 +202,8 @@ def build_dataset(words, vocab_size):
 def save_vectors(vectors):
 
     ###FILL HERE###
-    file_name = time.time.strftime('%Y%m%d-%H%M%S') + ' - embedding' + '.csv'
+    file_name = str(datetime.datetime.now().date()) + '_' + str(datetime.datetime.now().time()).replace(':', '.')
+    # file_name = time.strftime('%Y%m%d-%H%M%S') + ' - embedding' + '.csv'
     print(vectors)
     print(vectors.shape)
     print(vectors[1].shape)
