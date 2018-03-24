@@ -23,7 +23,7 @@ VOCABULARY_SIZE = 15000 #The most N word to consider in the dictionary
 
 # TODO my parameter
 NUM_DOMAIN_WORDS = 10000 #00 # was 1000
-STEP_NUM = 30000 #0
+STEP_NUM = 30000 #0 #0
 STEP_CHECK = 10
 
 TRAIN_DIR = "dataset/DATA/TRAIN"
@@ -232,6 +232,7 @@ with tf.Session(graph=graph) as session:
     ### SAVE VECTORS ###
 
     save_vectors(final_embeddings)
+    eval.plot()
 
     # Write corresponding labels for the embeddings.
     with open(TMP_DIR + 'metadata.tsv', 'w') as f:

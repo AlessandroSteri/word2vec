@@ -1,4 +1,5 @@
 import tensorflow as tf
+import matplotlib.pyplot as plt
 
 
 class evaluation():
@@ -8,6 +9,7 @@ class evaluation():
         self.nemb = nemb
         self.vocab_size = len(dictionary.keys())
         self.build_eval_graph()
+        self.accuracy_log = []
 
     def build_eval_graph(self):
         """Build the eval graph."""
@@ -101,3 +103,16 @@ class evaluation():
         print()
         print("Eval %4d/%d accuracy = %4.1f%%" % (correct, total,
                                                   correct * 100.0 / total))
+        self.accuracy_log.append(correct)
+
+    def plot(self):
+        iteration = range(len(self.accuracy_log))
+        plt.figure(1)
+        plt.plot(iteration, self.accuracy_log) #, time_opt, val_opt)
+        plt.legend(('Iteration', 'Accuracy' ))
+        plt.title('Compare')
+        plt.ylabel('plant.vO')
+        plt.xlabel('time')
+        plt.show()
+
+
