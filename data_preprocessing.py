@@ -51,7 +51,7 @@ def generate_batch(batch_size, curr_batch, window_size, data):
     for pivot_word in data[batch_index:]:
         batch_index = batch_index + 1 % len(data)
         window = data[max(batch_index - window_size, 0):]
-        window = window[:min(batch_index + window_size, len(data)) +1]
+        window = window[:min(batch_index + window_size, len(data))]
         if len(train_data) >= batch_size:
             break
         for context_word in window:

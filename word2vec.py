@@ -15,15 +15,15 @@ from evaluation import evaluation
 
 ### PARAMETERS ###
 
-BATCH_SIZE = 128 #*2*2*2*2 #Number of samples per batch
-EMBEDDING_SIZE = 128 # Dimension of the embedding vector.
-WINDOW_SIZE = 1  # How many words to consider left and right.
+BATCH_SIZE = 128 *2*2*2*2#*2 #Number of samples per batch
+EMBEDDING_SIZE = 200 # Dimension of the embedding vector.
+WINDOW_SIZE = 3  # How many words to consider left and right.
 NEG_SAMPLES = 64  # Number of negative examples to sample.
 VOCABULARY_SIZE = 15000 #The most N word to consider in the dictionary
 
 # TODO my parameter
-NUM_DOMAIN_WORDS = 10000 #00 # was 1000
-STEP_NUM = 30000 #0 #0
+NUM_DOMAIN_WORDS = 20000 #00 # was 1000
+STEP_NUM = 90000 #0 #0
 STEP_CHECK = 10
 
 TRAIN_DIR = "dataset/DATA/TRAIN"
@@ -155,7 +155,7 @@ with graph.as_default():
     with tf.name_scope('optimizer'):
         # TODO: taken from slides
         # was: optimizer = None ###FILL HERE ###
-        optimizer = tf.train.GradientDescentOptimizer(0.3).minimize(loss)
+        optimizer = tf.train.GradientDescentOptimizer(0.1).minimize(loss)
 
     # Compute the cosine similarity between minibatch examples and all embeddings.
     norm = tf.sqrt(tf.reduce_sum(tf.square(embeddings), 1, keep_dims=True))

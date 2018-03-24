@@ -1,5 +1,5 @@
 import tensorflow as tf
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 
 class evaluation():
@@ -106,13 +106,15 @@ class evaluation():
         self.accuracy_log.append(correct)
 
     def plot(self):
-        iteration = range(len(self.accuracy_log))
-        plt.figure(1)
-        plt.plot(iteration, self.accuracy_log) #, time_opt, val_opt)
-        plt.legend(('Iteration', 'Accuracy' ))
-        plt.title('Compare')
-        plt.ylabel('plant.vO')
-        plt.xlabel('time')
-        plt.show()
+        print('[ACCURACY:]')
+        print(self.accuracy_log)
+        # iteration = range(len(self.accuracy_log))
+        # plt.figure(1)
+        # plt.plot(iteration, self.accuracy_log) #, time_opt, val_opt)
+        # plt.legend(('Iteration', 'Accuracy' ))
+        # plt.title('Compare')
+        # plt.ylabel('plant.vO')
+        # plt.xlabel('time')
+        # plt.show()
 
 
