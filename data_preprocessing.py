@@ -14,6 +14,8 @@ UNK_INDEX = 0
 
 batch_time = 0
 batch_index = 0
+training_pairs = 0
+used_training_pairs = 0
 ### generate_batch ###
 # This function generates the train data and label batch from the dataset.
 #
@@ -29,9 +31,17 @@ def generate_batch(batch_size, curr_batch, window_size, data):
     train_data = []
     labels = []
 
+
     ###FILL HERE###
     global batch_time
     global batch_index
+    global training_pairs
+    global used_training_pairs
+
+    if curr_batch % 10 == 0:
+        print("training_pairs: {}, used_training_pairs: {}".format(training_pairs,
+              used_training_pairs))
+
     start = time()
     # make more elegant
     # full_train_data = []
@@ -50,10 +60,13 @@ def generate_batch(batch_size, curr_batch, window_size, data):
             #data[max(batch_index - window_size, 0): min(batch_index +
             #                                    window_size,
             #                                    len(data)) + 1]:
-            if context_word != pivot_word:
+            training_pairs += 1
+            if pivot_word != 0 and context_word != 0 and context_word != pivot_word:
+                used_training_pairs += 1
                 # x, y = skip_gram(pivot_word, context_word)
                 train_data.append(pivot_word)
                 labels.append(context_word)
+
 
     # print("full_train_data: {}".format(len(full_train_data)))
     # print("full_labels: {}".format(len(full_labels)))
@@ -101,7 +114,7 @@ def generate_batch(batch_size, curr_batch, window_size, data):
     stop = time()
     dur = stop - start
     batch_time += dur
-    print('time spent in bacth: {}'.format(batch_time))
+    print('time spent in batch: {}'.format(batch_time))
     return train_data, labels
 
 ### build_dataset ###
@@ -166,9 +179,9 @@ def build_dataset(words, vocab_size):
     # print("Distinct words: ", len(vocab))
     #TODO: taken from course slides^
     # TODO: taken from stackoverflow
-    # file_name = str(datetime.datetime.now().date()) + '_' + str(datetime.datetime.now().time()).replace(':', '.')
+    file_name = str(datetime.datetime.now().date()) + '_' + str(datetime.datetime.now().time()).replace(':', '.') + '_vocabulary.csv'
     # file_name = 'vocabulary.csv'
-    file_name = time.time.strftime('%Y%m%d-%H%M%S') + '- vocabulary' + '.csv'
+    # file_name = time.time.strftime('%Y%m%d-%H%M%S') + '- vocabulary' + '.csv'
     with open(file_name,'w') as csvfile:
         fieldnames=['word','occur']
         writer=csv.writer(csvfile)
@@ -204,9 +217,9 @@ def build_dataset(words, vocab_size):
 def save_vectors(vectors):
 
     ###FILL HERE###
-    file_name = str(datetime.datetime.now().date()) + '_' + str(datetime.datetime.now().time()).replace(':', '.')
+    file_name = str(datetime.datetime.now().date()) + '_' + str(datetime.datetime.now().time()).replace(':', '.') + '_vectors.csv'
     # file_name = 'vector.csv'
-    file_name = time.strftime('%Y%m%d-%H%M%S') + ' - embedding' + '.csv'
+    # file_name = time.strftime('%Y%m%d-%H%M%S') + ' - embedding' + '.csv'
     print(vectors)
     print(vectors.shape)
     print(vectors[1].shape)

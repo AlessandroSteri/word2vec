@@ -22,15 +22,14 @@ NEG_SAMPLES = 64  # Number of negative examples to sample.
 VOCABULARY_SIZE = 15000 #The most N word to consider in the dictionary
 
 # TODO my parameter
-NUM_DOMAIN_WORDS = 1000000 # was 1000
-STEP_NUM = 100000
+NUM_DOMAIN_WORDS = 10000 #00 # was 1000
+STEP_NUM = 10000 #0
 STEP_CHECK = 10
 
 TRAIN_DIR = "dataset/DATA/TRAIN"
 VALID_DIR = "dataset/DATA/DEV"
 TMP_DIR = "/tmp/"
 ANALOGIES_FILE = "dataset/eval/questions-words.txt"
-
 
 ### READ THE TEXT FILES ###
 
@@ -72,19 +71,7 @@ questions = read_analogies(ANALOGIES_FILE, dictionary)
 
 print('Total words occurencies: {}'.format(len(data)))
 
-WINDOW_SIZE = 2  # How many words to consider left and right.
-NEG_SAMPLES = 64  # Number of negative examples to sample.
-VOCABULARY_SIZE = 15000 #The most N word to consider in the dictionary
 
-# TODO my parameter
-NUM_DOMAIN_WORDS = 1000000 # was 1000
-STEP_NUM = 100000
-STEP_CHECK = 10
-
-TRAIN_DIR = "dataset/DATA/TRAIN"
-VALID_DIR = "dataset/DATA/DEV"
-TMP_DIR = "/tmp/"
-ANALOGIES_FILE = "dataset/eval/questions-words.txt"
 
 
 ### READ THE TEXT FILES ###
@@ -168,7 +155,7 @@ with graph.as_default():
     with tf.name_scope('optimizer'):
         # TODO: taken from slides
         # was: optimizer = None ###FILL HERE ###
-        optimizer = tf.train.GradientDescentOptimizer(0.1).minimize(loss)
+        optimizer = tf.train.GradientDescentOptimizer(1).minimize(loss)
 
     # Compute the cosine similarity between minibatch examples and all embeddings.
     norm = tf.sqrt(tf.reduce_sum(tf.square(embeddings), 1, keep_dims=True))
