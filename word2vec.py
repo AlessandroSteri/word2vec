@@ -16,14 +16,14 @@ from evaluation import evaluation
 ### PARAMETERS ###
 
 BATCH_SIZE = 128 #*2*2*2*2 #Number of samples per batch
-EMBEDDING_SIZE = 128 #128 # Dimension of the embedding vector.
-WINDOW_SIZE = 1  # How many words to consider left and right.
+EMBEDDING_SIZE = 200 #128 # Dimension of the embedding vector.
+WINDOW_SIZE = 2  # How many words to consider left and right.
 NEG_SAMPLES = 64  # Number of negative examples to sample.
 VOCABULARY_SIZE = 15000 #The most N word to consider in the dictionary
 
 # TODO my parameter
 NUM_DOMAIN_WORDS = 1000000 # was 1000
-STEP_NUM = 1 #000
+STEP_NUM = 100000
 STEP_CHECK = 10
 
 TRAIN_DIR = "dataset/DATA/TRAIN"
@@ -70,6 +70,62 @@ del raw_data  # Hint to reduce memory.
 # read the question file for the Analogical Reasoning evaluation
 questions = read_analogies(ANALOGIES_FILE, dictionary)
 
+print('Total words occurencies: {}'.format(len(data)))
+
+WINDOW_SIZE = 2  # How many words to consider left and right.
+NEG_SAMPLES = 64  # Number of negative examples to sample.
+VOCABULARY_SIZE = 15000 #The most N word to consider in the dictionary
+
+# TODO my parameter
+NUM_DOMAIN_WORDS = 1000000 # was 1000
+STEP_NUM = 100000
+STEP_CHECK = 10
+
+TRAIN_DIR = "dataset/DATA/TRAIN"
+VALID_DIR = "dataset/DATA/DEV"
+TMP_DIR = "/tmp/"
+ANALOGIES_FILE = "dataset/eval/questions-words.txt"
+
+
+### READ THE TEXT FILES ###
+
+# Read the data into a list of strings.
+# the domain_words parameters limits the number of words to be loaded per domain
+def read_data(directory, domain_words=-1):
+    data = []
+    for domain in os.listdir(directory):
+    #for dirpath, dnames, fnames in os.walk(directory):
+        limit = domain_words
+        for f in os.listdir(os.path.join(directory, domain)):
+            if f.endswith(".txt"):
+                with open(os.path.join(directory, domain, f)) as file:
+                    for line in file.readlines():
+                        split = line.lower().strip().split()
+                        if limit > 0 and limit - len(split) < 0:
+                            split = split[:limit]
+                        else:
+                            limit -= len(split)
+                        if limit >= 0 or limit == -1:
+                            data += split
+    return data
+
+# load the training set
+raw_data = read_data(TRAIN_DIR, domain_words=NUM_DOMAIN_WORDS)
+print('Data size', len(raw_data))
+# the portion of the training set used for data evaluation
+valid_size = 16  # Random set of words to evaluate similarity on.
+valid_window = 100  # Only pick dev samples in the head of the distribution.
+valid_examples = np.random.choice(valid_window, valid_size, replace=False)
+
+
+### CREATE THE DATASET AND WORD-INT MAPPING ###
+
+data, dictionary, reverse_dictionary = build_dataset(raw_data, VOCABULARY_SIZE)
+del raw_data  # Hint to reduce memory.
+# read the question file for the Analogical Reasoning evaluation
+questions = read_analogies(ANALOGIES_FILE, dictionary)
+
+print('Datas: ')
 ### MODEL DEFINITION ###
 
 graph = tf.Graph()
@@ -112,7 +168,7 @@ with graph.as_default():
     with tf.name_scope('optimizer'):
         # TODO: taken from slides
         # was: optimizer = None ###FILL HERE ###
-        optimizer = tf.train.GradientDescentOptimizer(0.5).minimize(loss)
+        optimizer = tf.train.GradientDescentOptimizer(0.1).minimize(loss)
 
     # Compute the cosine similarity between minibatch examples and all embeddings.
     norm = tf.sqrt(tf.reduce_sum(tf.square(embeddings), 1, keep_dims=True))
@@ -168,7 +224,7 @@ with tf.Session(graph=graph) as session:
         # Add returned summaries to writer in each step.
         writer.add_summary(summary, step)
         # Add metadata to visualize the graph for the last run.
-        if step % 10*STEP_CHECK == 0:
+        if step % 50*STEP_CHECK == 0:
             sim = similarity.eval()
             for i in range(valid_size):
                 valid_word = reverse_dictionary[valid_examples[i]]

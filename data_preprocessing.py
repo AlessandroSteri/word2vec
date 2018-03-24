@@ -10,6 +10,7 @@ import string
 from time import time
 
 UNK = "<UNK>"
+UNK_INDEX = 0
 
 batch_time = 0
 batch_index = 0
@@ -165,9 +166,10 @@ def build_dataset(words, vocab_size):
     # print("Distinct words: ", len(vocab))
     #TODO: taken from course slides^
     # TODO: taken from stackoverflow
-    file_name = str(datetime.datetime.now().date()) + '_' + str(datetime.datetime.now().time()).replace(':', '.')
-    # file_name = time.time.strftime('%Y%m%d-%H%M%S') + '- vocabulary' + '.csv'
-    with open('file_name','w') as csvfile:
+    # file_name = str(datetime.datetime.now().date()) + '_' + str(datetime.datetime.now().time()).replace(':', '.')
+    # file_name = 'vocabulary.csv'
+    file_name = time.time.strftime('%Y%m%d-%H%M%S') + '- vocabulary' + '.csv'
+    with open(file_name,'w') as csvfile:
         fieldnames=['word','occur']
         writer=csv.writer(csvfile)
         writer.writerow(fieldnames)
@@ -181,12 +183,12 @@ def build_dataset(words, vocab_size):
         common_word, _ = word_occurrency
         # print("Index: {}, word: {}".format(index, common_word))
 
-        dictionary[common_word] = index
-        reversed_dictionary[index] = common_word
+        dictionary[common_word] = index + 1
+        reversed_dictionary[index + 1] = common_word
 
     # Handling less frequent words as UNK
-    dictionary[UNK] = vocab_size-1
-    reversed_dictionary[vocab_size-1] = UNK
+    dictionary[UNK] = UNK_INDEX #vocab_size-1
+    reversed_dictionary[UNK_INDEX] = UNK
     #TODO: double check if UNK is out of one
 
 
@@ -203,7 +205,8 @@ def save_vectors(vectors):
 
     ###FILL HERE###
     file_name = str(datetime.datetime.now().date()) + '_' + str(datetime.datetime.now().time()).replace(':', '.')
-    # file_name = time.strftime('%Y%m%d-%H%M%S') + ' - embedding' + '.csv'
+    # file_name = 'vector.csv'
+    file_name = time.strftime('%Y%m%d-%H%M%S') + ' - embedding' + '.csv'
     print(vectors)
     print(vectors.shape)
     print(vectors[1].shape)
