@@ -38,10 +38,10 @@ def generate_batch(batch_size, curr_batch, window_size, data):
     global training_pairs
     global used_training_pairs
 
-    if curr_batch % 1000 == 0:
-        print("training_pairs: {}, used_training_pairs: {}".format(training_pairs,
-              used_training_pairs))
-        print('Batch time: {}'.format(batch_time))
+    # if curr_batch % 1000 == 0:
+    #     print("training_pairs: {}, used_training_pairs: {}".format(training_pairs,
+    #           used_training_pairs))
+    #     print('Batch time: {}'.format(batch_time))
 
     start = time()
     # make more elegant

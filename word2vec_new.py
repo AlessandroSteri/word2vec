@@ -1,5 +1,4 @@
 import os
-import math
 
 import tensorflow as tf
 import numpy as np
@@ -8,8 +7,6 @@ from tensorboard.plugins import projector
 from data_preprocessing import generate_batch, build_dataset, save_vectors, read_analogies
 from evaluation import evaluation
 
-from sklearn.manifold import TSNE
-import matplotlib.pyplot as plt
 
 # run on CPU
 # comment this part if you want to run it on GPU
@@ -19,16 +16,16 @@ import matplotlib.pyplot as plt
 ### PARAMETERS ###
 
 # BATCH_SIZE -> [ 32, 128, 256, 512, 1024, 2048 ]
-BATCH_SIZE = 128*2*2*2*2 #*2 #Number of samples per batch
+BATCH_SIZE = 128 #*2*2*2*2 #*2 #Number of samples per batch
 EMBEDDING_SIZE = 128 # Dimension of the embedding vector.
 WINDOW_SIZE = 2  # How many words to consider left and right.
 NEG_SAMPLES = 64  # Number of negative examples to sample.
-VOCABULARY_SIZE = 50000 #The most N word to consider in the dictionary
+VOCABULARY_SIZE = 500 #The most N word to consider in the dictionary
 
 # TODO my parameter
 NUM_DOMAIN_WORDS = 400000 #00 # was 1000
-NUM_STEPS = 100000 #0 #0
-STEP_CHECK = 5000
+STEP_NUM = 100000 #0 #0
+STEP_CHECK = 1000
 #
 TRAIN_DIR = "dataset/DATA/TRAIN"
 VALID_DIR = "dataset/DATA/DEV"
@@ -133,17 +130,15 @@ with graph.as_default():
 
     ### }}}
     # TODO: taken from slides
-    embeddings = tf.Variable(tf.random_uniform([VOCABULARY_SIZE, EMBEDDING_SIZE], -1.0, 1.0))
+    embeddings = tf.Variable(tf.random_normal([VOCABULARY_SIZE, EMBEDDING_SIZE], -1, 1))
     # ^ was embeddings = tf.Variable() #placeholder variable
     # emb_bias = tf.Variable(tf.random_normal(EMBEDDING_SIZE)) #placeholder variable
     ### FILL HERE ###{{{
     # TODO: taken from slides
     # selects column from index instead of product
     hidden_representation = tf.nn.embedding_lookup(embeddings, train_inputs)
-
-    nce_weights = tf.Variable(tf.truncated_normal([VOCABULARY_SIZE, EMBEDDING_SIZE], stddev=1.0 / math.sqrt(EMBEDDING_SIZE)))
     # TODO: just inverted dimension acccording to google
-    # W2 = tf.Variable(tf.random_normal([VOCABULARY_SIZE, EMBEDDING_SIZE]))
+    W2 = tf.Variable(tf.random_normal([VOCABULARY_SIZE, EMBEDDING_SIZE]))
     # output = tf.matmul(hidden_representation, W2)
     nce_biases =  tf.Variable(tf.zeros([VOCABULARY_SIZE]) )
 
@@ -154,7 +149,7 @@ with graph.as_default():
         # was: loss = None ### FILL HERE ###
         # loss = tf.losses.sparse_softmax_cross_entropy(train_labels, output)
         loss = tf.reduce_mean(tf.nn.nce_loss(
-            weights=nce_weights,
+            weights=W2,
             biases=nce_biases,
             labels=train_labels,
             inputs=hidden_representation,
@@ -191,6 +186,7 @@ with graph.as_default():
 ### TRAINING ###
 
 # Step 5: Begin training.
+num_steps =  STEP_NUM
 
 with tf.Session(graph=graph) as session:
 #, config=tf.ConfigProto(log_device_placement=True)) as session:
@@ -201,7 +197,7 @@ with tf.Session(graph=graph) as session:
     print('Initialized')
 
     average_loss = 0
-    bar = tqdm.trange(NUM_STEPS) #tqdm(range(NUM_STEPS))
+    bar = tqdm.tqdm(range(num_steps))
     for step in bar:
         batch_inputs, batch_labels = generate_batch(BATCH_SIZE, step, WINDOW_SIZE, data)
 
@@ -234,14 +230,11 @@ with tf.Session(graph=graph) as session:
                     close_word = reverse_dictionary[nearest[k]]
                     log_str = '%s %s,' % (log_str, close_word)
                 print(log_str)
-        if step == (NUM_STEPS - 1):
+        if step == (num_steps - 1):
             writer.add_run_metadata(run_metadata, 'step%d' % step)
         if step % STEP_CHECK is 0:
             eval.eval(session)
             print("avg loss: "+str(average_loss/step))
-            initial_acc = eval.accuracy_log[0]
-            curr_acc = eval.accuracy_log[len(eval.accuracy_log - 1)]
-            print("accuracy gain: "+str(curr_acc - initial_acc))
     final_embeddings = normalized_embeddings.eval()
 
     ### SAVE VECTORS ###
@@ -265,27 +258,3 @@ with tf.Session(graph=graph) as session:
     projector.visualize_embeddings(writer, config)
 
 writer.close()
-
-# Function to draw visualization of distance between embeddings.
-def plot_with_labels(low_dim_embs, labels, filename):
-    assert low_dim_embs.shape[0] >= len(labels), 'More labels than embeddings'
-    plt.figure(figsize=(18, 18))  # in inches
-    for i, label in enumerate(labels):
-        x, y = low_dim_embs[i, :]
-        plt.scatter(x, y)
-        plt.annotate(
-                    label,
-                    xy=(x, y),
-                    xytext=(5, 2),
-                    textcoords='offset points',
-                    ha='right',
-                    va='bottom'
-                    )
-        plt.savefig(filename)
-
-
-tsne = TSNE(perplexity=30, n_components=2, init='pca', n_iter=5000, method='exact')
-plot_only = 500
-low_dim_embs = tsne.fit_transform(final_embeddings[:plot_only, :])
-labels = [reverse_dictionary[i] for i in range(plot_only)]
-plot_with_labels(low_dim_embs, labels, os.path.join('~/Desktop', 'tsne.png'))
