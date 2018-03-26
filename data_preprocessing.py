@@ -38,9 +38,10 @@ def generate_batch(batch_size, curr_batch, window_size, data):
     global training_pairs
     global used_training_pairs
 
-    if curr_batch % 10 == 0:
+    if curr_batch % 1000 == 0:
         print("training_pairs: {}, used_training_pairs: {}".format(training_pairs,
               used_training_pairs))
+        print('Batch time: {}'.format(batch_time))
 
     start = time()
     # make more elegant
@@ -107,14 +108,14 @@ def generate_batch(batch_size, curr_batch, window_size, data):
     # labels = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 ]
 
     train_data = np.asarray(train_data)
-    labels = np.asarray(labels) #.reshape(batch_size,1)
+    labels = np.asarray(labels).reshape(batch_size,1)
 
     # print("Train data shape: {}".format(train_data.shape))
 
     stop = time()
     dur = stop - start
     batch_time += dur
-    print('time spent in batch: {}'.format(batch_time))
+    # print('time spent in batch: {}'.format(batch_time))
     return train_data, labels
 
 ### build_dataset ###
@@ -139,8 +140,10 @@ def build_dataset(words, vocab_size):
 
     ###FILL HERE###
 
+    stopwords_file = './stopwords2.txt'
+    # stopwords_file = './stopwords_full.txt'
     #TODO: taken from course slides:
-    stopwords = get_stopwords('./stopwords2.txt')
+    stopwords = get_stopwords(stopwords_file)
     vocab = collections.Counter()
 
     # tokenizer = nltk.tokenizer.casual.casual
@@ -179,7 +182,7 @@ def build_dataset(words, vocab_size):
     # print("Distinct words: ", len(vocab))
     #TODO: taken from course slides^
     # TODO: taken from stackoverflow
-    file_name = str(datetime.datetime.now().date()) + '_' + str(datetime.datetime.now().time()).replace(':', '.') + '_vocabulary.csv'
+    file_name = 'out/' + str(datetime.datetime.now().date()) + '_' + str(datetime.datetime.now().time()).replace(':', '.') + '_vocabulary.csv'
     # file_name = 'vocabulary.csv'
     # file_name = time.time.strftime('%Y%m%d-%H%M%S') + '- vocabulary' + '.csv'
     with open(file_name,'w') as csvfile:
@@ -217,7 +220,7 @@ def build_dataset(words, vocab_size):
 def save_vectors(vectors):
 
     ###FILL HERE###
-    file_name = str(datetime.datetime.now().date()) + '_' + str(datetime.datetime.now().time()).replace(':', '.') + '_vectors.csv'
+    file_name = 'out/' + str(datetime.datetime.now().date()) + '_' + str(datetime.datetime.now().time()).replace(':', '.') + '_vectors.csv'
     # file_name = 'vector.csv'
     # file_name = time.strftime('%Y%m%d-%H%M%S') + ' - embedding' + '.csv'
     print(vectors)

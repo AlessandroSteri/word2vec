@@ -15,15 +15,16 @@ from evaluation import evaluation
 
 ### PARAMETERS ###
 
-BATCH_SIZE = 128 *2*2*2*2 #*2 #Number of samples per batch
-EMBEDDING_SIZE = 200 # Dimension of the embedding vector.
-WINDOW_SIZE = 3  # How many words to consider left and right.
+# BATCH_SIZE -> [ 32, 128, 256, 512, 1024, 2048 ]
+BATCH_SIZE = 128 #*2*2*2*2 #*2 #Number of samples per batch
+EMBEDDING_SIZE = 128 # Dimension of the embedding vector.
+WINDOW_SIZE = 2  # How many words to consider left and right.
 NEG_SAMPLES = 64  # Number of negative examples to sample.
-VOCABULARY_SIZE = 15000 #The most N word to consider in the dictionary
+VOCABULARY_SIZE = 500 #The most N word to consider in the dictionary
 
 # TODO my parameter
 NUM_DOMAIN_WORDS = 400000 #00 # was 1000
-STEP_NUM = 90000 #0 #0
+STEP_NUM = 100000 #0 #0
 STEP_CHECK = 1000
 #
 TRAIN_DIR = "dataset/DATA/TRAIN"
@@ -122,7 +123,7 @@ with graph.as_default():
     # Define input data tensors.
     with tf.name_scope('inputs'):
         train_inputs = tf.placeholder(tf.int32, shape=[BATCH_SIZE])
-        train_labels = tf.placeholder(tf.int32, shape=[BATCH_SIZE]) #, 1])
+        train_labels = tf.placeholder(tf.int32, shape=[BATCH_SIZE, 1])
         valid_dataset = tf.constant(valid_examples, dtype=tf.int32)
 
     ### FILL HERE ###{{{
