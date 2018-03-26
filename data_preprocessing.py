@@ -162,6 +162,9 @@ def build_dataset(words, vocab_size):
             # remove most of stop words, remove also up which is ineresting
             # print('[build_dataset] Word with less than 2: {}'.format(w))
             continue
+        if w == '' or w in stopwords:
+            # NB data will also skip those
+            continue
 
         char_to_take_of = set(string.punctuation)
         # allow word like new york
@@ -178,6 +181,10 @@ def build_dataset(words, vocab_size):
             w_no_char = w_no_char.replace('..', '.')
 
 
+        if len(w_no_char) <= 2 or w_no_char in stopwords:
+            # remove most of stop words, remove also up which is ineresting
+            # print('[build_dataset] Word with less than 2: {}'.format(w))
+            continue
         vocab[w_no_char] += 1
     # print("Distinct words: ", len(vocab))
     #TODO: taken from course slides^

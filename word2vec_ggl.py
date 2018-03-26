@@ -19,14 +19,14 @@ import matplotlib.pyplot as plt
 ### PARAMETERS ###
 
 # BATCH_SIZE -> [ 32, 128, 256, 512, 1024, 2048 ]
-BATCH_SIZE = 128*2*2*2*2 #*2 #Number of samples per batch
+BATCH_SIZE = 128*2 #*2*2*2 #*2 #Number of samples per batch
 EMBEDDING_SIZE = 128 # Dimension of the embedding vector.
 WINDOW_SIZE = 2  # How many words to consider left and right.
 NEG_SAMPLES = 64  # Number of negative examples to sample.
-VOCABULARY_SIZE = 50000 #The most N word to consider in the dictionary
+VOCABULARY_SIZE = 15000 #0 #The most N word to consider in the dictionary
 
 # TODO my parameter
-NUM_DOMAIN_WORDS = 400000 #00 # was 1000
+NUM_DOMAIN_WORDS = 40000 # 0 #00 # was 1000
 NUM_STEPS = 100000 #0 #0
 STEP_CHECK = 5000
 #
@@ -240,7 +240,7 @@ with tf.Session(graph=graph) as session:
             eval.eval(session)
             print("avg loss: "+str(average_loss/step))
             initial_acc = eval.accuracy_log[0]
-            curr_acc = eval.accuracy_log[len(eval.accuracy_log - 1)]
+            curr_acc = eval.accuracy_log[len(eval.accuracy_log) - 1]
             print("accuracy gain: "+str(curr_acc - initial_acc))
     final_embeddings = normalized_embeddings.eval()
 
