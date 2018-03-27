@@ -17,7 +17,6 @@ import matplotlib.pyplot as plt
 # os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 ### PARAMETERS ###
-
 # BATCH_SIZE -> [ 32, 128, 256, 512, 1024, 2048 ]
 BATCH_SIZE = 128*2 #*2*2*2 #*2 #Number of samples per batch
 EMBEDDING_SIZE = 128 # Dimension of the embedding vector.
@@ -47,6 +46,7 @@ def read_data(directory, domain_words=-1):
         for f in os.listdir(os.path.join(directory, domain)):
             if f.endswith(".txt"):
                 with open(os.path.join(directory, domain, f)) as file:
+                    # sentences = []
                     for line in file.readlines():
                         split = line.lower().strip().split()
                         if limit > 0 and limit - len(split) < 0:
@@ -54,13 +54,15 @@ def read_data(directory, domain_words=-1):
                         else:
                             limit -= len(split)
                         if limit >= 0 or limit == -1:
-                            data += split
+                            data.append(split)
+                    # data.append(sentences)
     return data
 
 # load the training set
 raw_data = read_data(TRAIN_DIR, domain_words=NUM_DOMAIN_WORDS)
 print('Data size', len(raw_data))
 # the portion of the training set used for data evaluation
+
 valid_size = 16  # Random set of words to evaluate similarity on.
 valid_window = 100  # Only pick dev samples in the head of the distribution.
 valid_examples = np.random.choice(valid_window, valid_size, replace=False)
@@ -75,48 +77,8 @@ questions = read_analogies(ANALOGIES_FILE, dictionary)
 
 print('Total words occurencies: {}'.format(len(data)))
 
-
-
-
-### READ THE TEXT FILES ###
-
-# Read the data into a list of strings.
-# the domain_words parameters limits the number of words to be loaded per domain
-def read_data(directory, domain_words=-1):
-    data = []
-    for domain in os.listdir(directory):
-    #for dirpath, dnames, fnames in os.walk(directory):
-        limit = domain_words
-        for f in os.listdir(os.path.join(directory, domain)):
-            if f.endswith(".txt"):
-                with open(os.path.join(directory, domain, f)) as file:
-                    for line in file.readlines():
-                        split = line.lower().strip().split()
-                        if limit > 0 and limit - len(split) < 0:
-                            split = split[:limit]
-                        else:
-                            limit -= len(split)
-                        if limit >= 0 or limit == -1:
-                            data += split
-    return data
-
-# load the training set
-raw_data = read_data(TRAIN_DIR, domain_words=NUM_DOMAIN_WORDS)
-print('Data size', len(raw_data))
-# the portion of the training set used for data evaluation
-valid_size = 16  # Random set of words to evaluate similarity on.
-valid_window = 100  # Only pick dev samples in the head of the distribution.
-valid_examples = np.random.choice(valid_window, valid_size, replace=False)
-
-
-### CREATE THE DATASET AND WORD-INT MAPPING ###
-
-data, dictionary, reverse_dictionary = build_dataset(raw_data, VOCABULARY_SIZE)
-del raw_data  # Hint to reduce memory.
-# read the question file for the Analogical Reasoning evaluation
-questions = read_analogies(ANALOGIES_FILE, dictionary)
-
 print('Datas: ')
+
 ### MODEL DEFINITION ###
 
 graph = tf.Graph()

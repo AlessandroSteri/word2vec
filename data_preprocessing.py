@@ -6,9 +6,9 @@ import datetime
 import nltk
 import csv
 import string
-
+import re
 from time import time
-
+import ipdb
 UNK = "<UNK>"
 UNK_INDEX = 0
 
@@ -19,7 +19,7 @@ used_training_pairs = 0
 ### generate_batch ###
 # This function generates the train data and label batch from the dataset.
 #
-### Parameters ###
+### Parameters ### TODO: update con parametri nuovi
 # batch_size: the number of train_data,label pairs to produce per batch
 # curr_batch: the current batch number.
 # window_size: the size of the context
@@ -27,14 +27,16 @@ used_training_pairs = 0
 ### Return values ###
 # train_data: train data for current batch
 # labels: labels for current batch
-def generate_batch(batch_size, curr_batch, window_size, data):
+# def generate_batch(batch_size, curr_batch, window_size, data):
+def generate_batch(batch_size, curr_sentence, curr_word, curr_context_word, window_size, data):
+    print('Generate')
     train_data = []
     labels = []
 
 
     ###FILL HERE###
     global batch_time
-    global batch_index
+    # global batch_index
     global training_pairs
     global used_training_pairs
 
@@ -44,30 +46,70 @@ def generate_batch(batch_size, curr_batch, window_size, data):
     #     print('Batch time: {}'.format(batch_time))
 
     start = time()
-    # make more elegant
-    # full_train_data = []
-    # full_labels = []
     # TODO: taken from slides
     # for word_index, pivot_word in enumerate(data[batch_index:]):
-    for pivot_word in data[batch_index:]:
-        batch_index = batch_index + 1 % len(data)
-        window = data[max(batch_index - window_size, 0):]
-        window = window[:min(batch_index + window_size, len(data))]
-        if len(train_data) >= batch_size:
-            break
-        for context_word in window:
-            if len(train_data) >= batch_size:
-                break
-            #data[max(batch_index - window_size, 0): min(batch_index +
-            #                                    window_size,
-            #                                    len(data)) + 1]:
-            training_pairs += 1
-            if pivot_word != 0 and context_word != 0 and context_word != pivot_word:
-                used_training_pairs += 1
-                # x, y = skip_gram(pivot_word, context_word)
-                train_data.append(pivot_word)
-                labels.append(context_word)
 
+    processed_sentences = curr_sentence
+    processed_words = curr_word
+    processed_context_words = curr_context_word
+    while len(train_data) < batch_size:
+        # if len(train_data) == 5:
+        # ipdb.set_trace()
+        # print('Pivot:\n{}'.format(processed_words))
+        sentence_index = processed_sentences % len(data)
+        sentence = data[sentence_index]
+        if processed_words == len(sentence):
+            # print('end sentence')
+            processed_sentences += 1
+            processed_words = 0
+            processed_context_words = 0
+            continue
+        else:
+            # print('inside sentence: {}'.format(processed_sentences))
+            # Other words to process in current sentence
+            window = sentence[max(processed_words - window_size,0):min(processed_words + window_size,len(sentence))]# + 1]
+            print('processed_words: {}, window_size:{}, len window:{}'.format(processed_words, window_size, len(window)))
+            # print('Window: {}'.format(window))
+            if processed_context_words == len(window):
+                # print('end window')
+                processed_words += 1
+                processed_context_words = 0
+                continue
+            else:
+                context_word = window[processed_context_words]
+                processed_context_words +=1
+                training_pairs += 1
+                pivot_word = sentence[processed_words]
+                # print('PW: {}, CW: {}'.format(pivot_word, context_word))
+                if pivot_word != UNK_INDEX and context_word != UNK_INDEX and context_word != pivot_word:
+                    used_training_pairs += 1
+                    train_data.append(pivot_word)
+                    labels.append(context_word)
+                    # print('Train data:\n{}'.format(train_data))
+                    # print('Labels:\n{}'.format(labels))
+
+
+
+
+    # for sentence in data[curr_sentence:]: # if last sentence?
+    #     # if len(sentence) == 1:
+    #         # continue
+    #     for pivot_word in sentence[curr_word:]:
+    #         # if len(train_data) >= batch_size:
+    #             # break
+    #         # batch_index = batch_index + 1 % len(data)
+    #         window = sentence[max(w_idx - window_size, 0):]
+    #         window = window[:min(w_idx + window_size, len(data))]
+    #         for context_word in window[curr_context_word:]:
+    #             if len(train_data) >= batch_size:
+    #                 # incrementi?
+    #                 break
+    #             training_pairs += 1
+    #             if pivot_word != UNK_INDEX and context_word != UNK_INDEX and context_word != pivot_word:
+    #                 used_training_pairs += 1
+    #                 train_data.append(pivot_word)
+    #                 labels.append(context_word)
+    #
 
     # print("full_train_data: {}".format(len(full_train_data)))
     # print("full_labels: {}".format(len(full_labels)))
@@ -115,7 +157,7 @@ def generate_batch(batch_size, curr_batch, window_size, data):
     stop = time()
     dur = stop - start
     batch_time += dur
-    # print('time spent in batch: {}'.format(batch_time))
+    print('time spent in batch: {}'.format(batch_time))
     return train_data, labels
 
 ### build_dataset ###
@@ -133,7 +175,7 @@ def generate_batch(batch_size, curr_batch, window_size, data):
 #       This is the original text but words are replaced by their codes
 # dictionary: map of words(strings) to their codes(integers)
 # reverse_dictionary: maps codes(integers) to words(strings)
-def build_dataset(words, vocab_size):
+def build_dataset(sentences, vocab_size):
     dictionary = dict()
     reversed_dictionary = dict()
     data = None
@@ -147,59 +189,58 @@ def build_dataset(words, vocab_size):
     vocab = collections.Counter()
 
     # tokenizer = nltk.tokenizer.casual.casual
-    for w in words:
-        if w == '' or w in stopwords:
-            # NB data will also skip those
-            continue
-        if '\\' in w:
-            # remove wiki markdown
-            # print('[build_dataset] Word with \ : {}'.format(w))
-            continue
-        if any(c.isdigit() for c in w):
-            # print('[build_dataset] Word with digit: {}'.format(w))
-            continue
-        if len(w) <= 2:
-            # remove most of stop words, remove also up which is ineresting
-            # print('[build_dataset] Word with less than 2: {}'.format(w))
-            continue
-        if w == '' or w in stopwords:
-            # NB data will also skip those
-            continue
+    for sentence in sentences:
+        for w in sentence:
+            if w == '': # or w in stopwords:
+                continue
+            if '\\' in w:
+                # remove wiki markdown
+                # print('[build_dataset] Word with \ : {}'.format(w))
+                continue
+            if any(c.isdigit() for c in w):
+                # print('[build_dataset] Word with digit: {}'.format(w))
+                continue
+            if len(w) <= 2:
+                # remove most of stop words, remove also up which is ineresting
+                # print('[build_dataset] Word with less than 2: {}'.format(w))
+                continue
+            if w == '' or w in stopwords:
+                continue
 
-        char_to_take_of = set(string.punctuation)
-        # allow word like new york
-        # TODO: remove -.
-        # char_to_take_of.pop('-')
-        # allow u.s.a.
-        # char_to_take_of.pop('.')
-        w_no_char = "".join(char for char in w if char not in char_to_take_of)
-        if '..' not in w_no_char:
-            w_no_char =  w_no_char.rstrip('-.').lstrip('-.')
-        else:
-            # preserving acronyms
-            w_no_char =  w_no_char.rstrip('-').lstrip('-')
-            w_no_char = w_no_char.replace('..', '.')
+            char_to_take_of = set(string.punctuation)
+            # allow word like new york
+            # TODO: remove -.
+            # char_to_take_of.pop('-')
+            # allow u.s.a.
+            # char_to_take_of.pop('.')
+            w_no_char = "".join(char for char in w if char not in char_to_take_of)
+            if '..' not in w_no_char:
+                w_no_char =  w_no_char.rstrip('-.').lstrip('-.')
+            else:
+                # preserving acronyms
+                w_no_char =  w_no_char.rstrip('-').lstrip('-')
+                w_no_char = w_no_char.replace('..', '.')
 
 
-        if len(w_no_char) <= 2 or w_no_char in stopwords:
-            # remove most of stop words, remove also up which is ineresting
-            # print('[build_dataset] Word with less than 2: {}'.format(w))
-            continue
-        vocab[w_no_char] += 1
+            if len(w_no_char) <= 2 or w_no_char in stopwords:
+                # remove most of stop words, remove also up which is ineresting
+                # print('[build_dataset] Word with less than 2: {}'.format(w))
+                continue
+            vocab[w_no_char] += 1
     # print("Distinct words: ", len(vocab))
+
     #TODO: taken from course slides^
     # TODO: taken from stackoverflow
     file_name = 'out/' + str(datetime.datetime.now().date()) + '_' + str(datetime.datetime.now().time()).replace(':', '.') + '_vocabulary.csv'
     # file_name = 'vocabulary.csv'
-    # file_name = time.time.strftime('%Y%m%d-%H%M%S') + '- vocabulary' + '.csv'
     with open(file_name,'w') as csvfile:
         fieldnames=['word','occur']
         writer=csv.writer(csvfile)
         writer.writerow(fieldnames)
         for key, value in enumerate(vocab.most_common(vocab_size-1)):
-
             writer.writerow([value[0], value[1]])
-    # Is a bias the fact that we follow the most common word order?
+
+    # Build dictionary
     for index, word_occurrency in enumerate(vocab.most_common(vocab_size-1)):
         # vocab_size -1 to leave one spot for UNK
 
@@ -212,12 +253,12 @@ def build_dataset(words, vocab_size):
     # Handling less frequent words as UNK
     dictionary[UNK] = UNK_INDEX #vocab_size-1
     reversed_dictionary[UNK_INDEX] = UNK
-    #TODO: double check if UNK is out of one
 
 
-    data = apply_dictionary(words, dictionary, UNK)
-    # uncomment to debug with words instead of indexes
-    # data = words
+    data = []
+    for sentence in sentences:
+        sentence_2_int = sentence #apply_dictionary(sentence, dictionary, UNK)
+        data.append(sentence_2_int)
 
     return data, dictionary, reversed_dictionary
 
@@ -267,6 +308,15 @@ def get_stopwords(file):
     return set([w.rstrip('\r\n') for w in open(file)])
 
 
+### apply_dictionary ###
+# This function maps elements of a list according to a given dictionary.
+#
+### Parameters ###
+# x_list: list of elements to map
+# dictionary: defines the map x -> y to apply
+# unk_key: default y for xs not in the domain of the map
+### Return values ###
+# y_list: list of x in x_list mapped accordingly to dictionary
 def apply_dictionary(x_list, dictionary, unk_key):
     y_list = []
     for x in x_list:
@@ -281,13 +331,6 @@ def apply_dictionary(x_list, dictionary, unk_key):
     return y_list
 
 ### MY HELPER FUNCTIONS ###
-def skip_gram(word, nb_word):
-    return word, nb_word
 
-def cbow(word, nb_word):
-    return nb_word, word
-
-
-# def negative_sample(num_negative, word, dictionary):
-    # pass
-
+# def is_acronym():
+    # acr = r'(?:[a-z]\.)+'
