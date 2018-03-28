@@ -8,7 +8,7 @@ from data_preprocessing import build_dataset
 from data_preprocessing import generate_batch
 
 VOCABULARY_SIZE = 50000
-BATCH_SIZE = 128*64*128 #10*2*2*2*32
+BATCH_SIZE = 128*128*64*128 #10*2*2*2*32
 WINDOW_SIZE = 6
 
 print('TEST: generate_batch')

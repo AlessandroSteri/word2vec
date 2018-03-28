@@ -67,6 +67,7 @@ def generate_batch(batch_size, curr_sentence, curr_word, curr_context_word, wind
         else:
             # print('inside sentence: {}'.format(processed_sentences))
             # Other words to process in current sentence
+            window = None
             window = sentence[max(processed_words - window_size,0):min(processed_words + window_size,len(sentence))]# + 1]
             print('processed_words: {}, window_size:{}, len window:{}'.format(processed_words, window_size, len(window)))
             # print('Window: {}'.format(window))
@@ -88,8 +89,16 @@ def generate_batch(batch_size, curr_sentence, curr_word, curr_context_word, wind
                     # print('Train data:\n{}'.format(train_data))
                     # print('Labels:\n{}'.format(labels))
 
+    train_data = np.asarray(train_data)
+    labels = np.asarray(labels).reshape(batch_size,1)
 
+    # print("Train data shape: {}".format(train_data.shape))
 
+    stop = time()
+    dur = stop - start
+    batch_time += dur
+    print('time spent in batch: {}'.format(batch_time))
+    return train_data, labels
 
     # for sentence in data[curr_sentence:]: # if last sentence?
     #     # if len(sentence) == 1:
@@ -149,16 +158,6 @@ def generate_batch(batch_size, curr_sentence, curr_word, curr_context_word, wind
     # train_data = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 ]
     # labels = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 ]
 
-    train_data = np.asarray(train_data)
-    labels = np.asarray(labels).reshape(batch_size,1)
-
-    # print("Train data shape: {}".format(train_data.shape))
-
-    stop = time()
-    dur = stop - start
-    batch_time += dur
-    print('time spent in batch: {}'.format(batch_time))
-    return train_data, labels
 
 ### build_dataset ###
 # This function is responsible of generating the dataset and dictionaries.
