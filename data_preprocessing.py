@@ -29,7 +29,7 @@ used_training_pairs = 0
 # labels: labels for current batch
 # def generate_batch(batch_size, curr_batch, window_size, data):
 def generate_batch(batch_size, curr_sentence, curr_word, curr_context_word, window_size, data):
-    print('Generate')
+    # print('Generate')
     train_data = []
     labels = []
 
@@ -69,7 +69,7 @@ def generate_batch(batch_size, curr_sentence, curr_word, curr_context_word, wind
             # Other words to process in current sentence
             window = None
             window = sentence[max(processed_words - window_size,0):min(processed_words + window_size,len(sentence)) + 1]
-            print('processed_words: {}, window_size:{}, len window:{}'.format(processed_words, window_size, len(window)))
+            # print('processed_words: {}, window_size:{}, len window:{}'.format(processed_words, window_size, len(window)))
             # print('Window: {}'.format(window))
             if processed_context_words == len(window):
                 # print('end window')
@@ -97,8 +97,8 @@ def generate_batch(batch_size, curr_sentence, curr_word, curr_context_word, wind
     stop = time()
     dur = stop - start
     batch_time += dur
-    print('time spent in batch: {}'.format(batch_time))
-    return train_data, labels
+    # print('time spent in batch: {}'.format(batch_time))
+    return train_data, labels, processed_sentences,processed_words, processed_context_words
 
     # for sentence in data[curr_sentence:]: # if last sentence?
     #     # if len(sentence) == 1:
@@ -256,7 +256,8 @@ def build_dataset(sentences, vocab_size):
 
     data = []
     for sentence in sentences:
-        sentence_2_int = sentence #apply_dictionary(sentence, dictionary, UNK)
+        # sentence_2_int = sentence # text in clear for debugging
+        sentence_2_int = apply_dictionary(sentence, dictionary, UNK)
         data.append(sentence_2_int)
 
     return data, dictionary, reversed_dictionary
@@ -292,7 +293,8 @@ def read_analogies(file, dictionary):
             if line.startswith(":"):  # Skip comments.
                 continue
             words = line.strip().lower().split(" ")
-            ids = [dictionary.get(str(w.strip()), 0) for w in words]
+            # ids = [dictionary.get(str(w.strip()), 0) for w in words]
+            ids = [dictionary.get(str(w.strip())) for w in words]
             if None in ids or len(ids) != 4:
                 questions_skipped += 1
             else:

@@ -8,8 +8,8 @@ from data_preprocessing import build_dataset
 from data_preprocessing import generate_batch
 
 VOCABULARY_SIZE = 50000
-BATCH_SIZE = 128*64*128 #10*2*2*2*32
-WINDOW_SIZE = 6
+BATCH_SIZE = 5#10*2*2*2*32
+WINDOW_SIZE = 19
 
 print('TEST: generate_batch')
 
@@ -36,6 +36,7 @@ def read_data(directory, domain_words=-1):
         # data.append(sentences)
     return data
 
+# redefined path inside method
 raw_data = read_data("dataset/DATA/TRAIN", domain_words=1000)
 
 # print(raw_data)
@@ -44,8 +45,21 @@ data, dictionary, reverse_dictionary = build_dataset(raw_data, VOCABULARY_SIZE)
 
 
 print("DATA:")
-print(data)
-batch_inputs, batch_labels = generate_batch(BATCH_SIZE, 0, 0, 0, WINDOW_SIZE, data)
+# print(data)
+# batch_inputs, batch_labels = generate_batch(BATCH_SIZE, 0, 0, 0, WINDOW_SIZE, data)
+curr_sentence = 0
+curr_word =0
+curr_context_word = 0
 
-for x, y in zip(batch_inputs, batch_labels):
-    print("{},{}".format(x,y[0]))
+for step in range(13):
+    batch_inputs, batch_labels, cs, cw, ccw = generate_batch(BATCH_SIZE, curr_sentence, curr_word,
+    curr_context_word, WINDOW_SIZE, data)
+    curr_sentence = cs
+    curr_word = cw
+    curr_context_word = ccw
+    for x, y in zip(batch_inputs, batch_labels):
+        print("{},{}".format(x,y[0]))
+
+
+# for x, y in zip(xs, ys):
+    # print("{},{}".format(x,y))

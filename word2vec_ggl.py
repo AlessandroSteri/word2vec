@@ -43,6 +43,9 @@ def read_data(directory, domain_words=-1):
     for domain in os.listdir(directory):
     #for dirpath, dnames, fnames in os.walk(directory):
         limit = domain_words
+        # Compatibility with macOS
+        if domain == ".DS_Store":
+            continue
         for f in os.listdir(os.path.join(directory, domain)):
             if f.endswith(".txt"):
                 with open(os.path.join(directory, domain, f)) as file:
@@ -164,9 +167,15 @@ with tf.Session(graph=graph) as session:
 
     average_loss = 0
     bar = tqdm.trange(NUM_STEPS) #tqdm(range(NUM_STEPS))
+    # batch_size, curr_sentence, curr_word, curr_context_word, window_size, data):
+    curr_sentence = 0
+    curr_word =0
+    curr_context_word = 0
     for step in bar:
-        batch_inputs, batch_labels = generate_batch(BATCH_SIZE, step, WINDOW_SIZE, data)
-
+        batch_inputs, batch_labels, cs, cw, ccw = generate_batch(BATCH_SIZE, curr_sentence, curr_word, curr_context_word, WINDOW_SIZE, data)
+        curr_sentence = cs
+        curr_word = cw
+        curr_context_word = ccw
         ### {{{
         # for x, y in zip(batch_inputs, batch_labels):
             # print("[ {}, {} ]".format(reverse_dictionary[x],reverse_dictionary[y]))
