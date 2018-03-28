@@ -68,7 +68,7 @@ def generate_batch(batch_size, curr_sentence, curr_word, curr_context_word, wind
             # print('inside sentence: {}'.format(processed_sentences))
             # Other words to process in current sentence
             window = None
-            window = sentence[max(processed_words - window_size,0):min(processed_words + window_size,len(sentence))]# + 1]
+            window = sentence[max(processed_words - window_size,0):min(processed_words + window_size,len(sentence)) + 1]
             print('processed_words: {}, window_size:{}, len window:{}'.format(processed_words, window_size, len(window)))
             # print('Window: {}'.format(window))
             if processed_context_words == len(window):

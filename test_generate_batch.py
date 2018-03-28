@@ -8,7 +8,7 @@ from data_preprocessing import build_dataset
 from data_preprocessing import generate_batch
 
 VOCABULARY_SIZE = 50000
-BATCH_SIZE = 128*128*64*128 #10*2*2*2*32
+BATCH_SIZE = 128*64*128 #10*2*2*2*32
 WINDOW_SIZE = 6
 
 print('TEST: generate_batch')
@@ -20,7 +20,8 @@ def read_data(directory, domain_words=-1):
     limit = domain_words
     #     for f in os.listdir(os.path.join(directory, domain)):
     #         if f.endswith("6582.txt"):
-    with open('dataset/DATA/TRAIN/HERALDRY_HONORS_AND_VEXILLOLOGY/47809.txt') as file:
+    # with open('dataset/DATA/TRAIN/HERALDRY_HONORS_AND_VEXILLOLOGY/47809.txt') as file:
+    with open('48903.txt') as file:
         # sentences = []
         for line in file.readlines():
             split = line.lower().strip().split()
