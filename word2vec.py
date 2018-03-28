@@ -1,4 +1,5 @@
 import os
+import math
 
 import tensorflow as tf
 import numpy as np
@@ -7,6 +8,8 @@ from tensorboard.plugins import projector
 from data_preprocessing import generate_batch, build_dataset, save_vectors, read_analogies
 from evaluation import evaluation
 
+from sklearn.manifold import TSNE
+import matplotlib.pyplot as plt
 
 # run on CPU
 # comment this part if you want to run it on GPU
@@ -14,17 +17,17 @@ from evaluation import evaluation
 # os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 ### PARAMETERS ###
-
-BATCH_SIZE = 128 *2*2*2*2 #*2 #Number of samples per batch
-EMBEDDING_SIZE = 200 # Dimension of the embedding vector.
-WINDOW_SIZE = 3  # How many words to consider left and right.
+# BATCH_SIZE -> [ 32, 128, 256, 512, 1024, 2048 ]
+BATCH_SIZE = 128*2 #*2*2*2 #*2 #Number of samples per batch
+EMBEDDING_SIZE = 128 # Dimension of the embedding vector.
+WINDOW_SIZE = 2  # How many words to consider left and right.
 NEG_SAMPLES = 64  # Number of negative examples to sample.
-VOCABULARY_SIZE = 15000 #The most N word to consider in the dictionary
+VOCABULARY_SIZE = 15000 #0 #The most N word to consider in the dictionary
 
 # TODO my parameter
-NUM_DOMAIN_WORDS = 400000 #00 # was 1000
-STEP_NUM = 90000 #0 #0
-STEP_CHECK = 1000
+NUM_DOMAIN_WORDS = 40000 # 0 #00 # was 1000
+NUM_STEPS = 100000 #0 #0
+STEP_CHECK = 5000
 #
 TRAIN_DIR = "dataset/DATA/TRAIN"
 VALID_DIR = "dataset/DATA/DEV"
@@ -40,9 +43,13 @@ def read_data(directory, domain_words=-1):
     for domain in os.listdir(directory):
     #for dirpath, dnames, fnames in os.walk(directory):
         limit = domain_words
+        # Compatibility with macOS
+        if domain == ".DS_Store":
+            continue
         for f in os.listdir(os.path.join(directory, domain)):
             if f.endswith(".txt"):
                 with open(os.path.join(directory, domain, f)) as file:
+                    # sentences = []
                     for line in file.readlines():
                         split = line.lower().strip().split()
                         if limit > 0 and limit - len(split) < 0:
@@ -50,13 +57,15 @@ def read_data(directory, domain_words=-1):
                         else:
                             limit -= len(split)
                         if limit >= 0 or limit == -1:
-                            data += split
+                            data.append(split)
+                    # data.append(sentences)
     return data
 
 # load the training set
 raw_data = read_data(TRAIN_DIR, domain_words=NUM_DOMAIN_WORDS)
 print('Data size', len(raw_data))
 # the portion of the training set used for data evaluation
+
 valid_size = 16  # Random set of words to evaluate similarity on.
 valid_window = 100  # Only pick dev samples in the head of the distribution.
 valid_examples = np.random.choice(valid_window, valid_size, replace=False)
@@ -71,48 +80,8 @@ questions = read_analogies(ANALOGIES_FILE, dictionary)
 
 print('Total words occurencies: {}'.format(len(data)))
 
-
-
-
-### READ THE TEXT FILES ###
-
-# Read the data into a list of strings.
-# the domain_words parameters limits the number of words to be loaded per domain
-def read_data(directory, domain_words=-1):
-    data = []
-    for domain in os.listdir(directory):
-    #for dirpath, dnames, fnames in os.walk(directory):
-        limit = domain_words
-        for f in os.listdir(os.path.join(directory, domain)):
-            if f.endswith(".txt"):
-                with open(os.path.join(directory, domain, f)) as file:
-                    for line in file.readlines():
-                        split = line.lower().strip().split()
-                        if limit > 0 and limit - len(split) < 0:
-                            split = split[:limit]
-                        else:
-                            limit -= len(split)
-                        if limit >= 0 or limit == -1:
-                            data += split
-    return data
-
-# load the training set
-raw_data = read_data(TRAIN_DIR, domain_words=NUM_DOMAIN_WORDS)
-print('Data size', len(raw_data))
-# the portion of the training set used for data evaluation
-valid_size = 16  # Random set of words to evaluate similarity on.
-valid_window = 100  # Only pick dev samples in the head of the distribution.
-valid_examples = np.random.choice(valid_window, valid_size, replace=False)
-
-
-### CREATE THE DATASET AND WORD-INT MAPPING ###
-
-data, dictionary, reverse_dictionary = build_dataset(raw_data, VOCABULARY_SIZE)
-del raw_data  # Hint to reduce memory.
-# read the question file for the Analogical Reasoning evaluation
-questions = read_analogies(ANALOGIES_FILE, dictionary)
-
 print('Datas: ')
+
 ### MODEL DEFINITION ###
 
 graph = tf.Graph()
@@ -122,22 +91,24 @@ with graph.as_default():
     # Define input data tensors.
     with tf.name_scope('inputs'):
         train_inputs = tf.placeholder(tf.int32, shape=[BATCH_SIZE])
-        train_labels = tf.placeholder(tf.int32, shape=[BATCH_SIZE]) #, 1])
+        train_labels = tf.placeholder(tf.int32, shape=[BATCH_SIZE, 1])
         valid_dataset = tf.constant(valid_examples, dtype=tf.int32)
 
     ### FILL HERE ###{{{
 
     ### }}}
     # TODO: taken from slides
-    embeddings = tf.Variable(tf.random_normal([VOCABULARY_SIZE, EMBEDDING_SIZE], -1, 1))
+    embeddings = tf.Variable(tf.random_uniform([VOCABULARY_SIZE, EMBEDDING_SIZE], -1.0, 1.0))
     # ^ was embeddings = tf.Variable() #placeholder variable
     # emb_bias = tf.Variable(tf.random_normal(EMBEDDING_SIZE)) #placeholder variable
     ### FILL HERE ###{{{
     # TODO: taken from slides
     # selects column from index instead of product
     hidden_representation = tf.nn.embedding_lookup(embeddings, train_inputs)
+
+    nce_weights = tf.Variable(tf.truncated_normal([VOCABULARY_SIZE, EMBEDDING_SIZE], stddev=1.0 / math.sqrt(EMBEDDING_SIZE)))
     # TODO: just inverted dimension acccording to google
-    W2 = tf.Variable(tf.random_normal([VOCABULARY_SIZE, EMBEDDING_SIZE]))
+    # W2 = tf.Variable(tf.random_normal([VOCABULARY_SIZE, EMBEDDING_SIZE]))
     # output = tf.matmul(hidden_representation, W2)
     nce_biases =  tf.Variable(tf.zeros([VOCABULARY_SIZE]) )
 
@@ -148,7 +119,7 @@ with graph.as_default():
         # was: loss = None ### FILL HERE ###
         # loss = tf.losses.sparse_softmax_cross_entropy(train_labels, output)
         loss = tf.reduce_mean(tf.nn.nce_loss(
-            weights=W2,
+            weights=nce_weights,
             biases=nce_biases,
             labels=train_labels,
             inputs=hidden_representation,
@@ -162,7 +133,7 @@ with graph.as_default():
     with tf.name_scope('optimizer'):
         # TODO: taken from slides
         # was: optimizer = None ###FILL HERE ###
-        optimizer = tf.train.GradientDescentOptimizer(0.1).minimize(loss)
+        optimizer = tf.train.GradientDescentOptimizer(0.5).minimize(loss)
 
     # Compute the cosine similarity between minibatch examples and all embeddings.
     norm = tf.sqrt(tf.reduce_sum(tf.square(embeddings), 1, keep_dims=True))
@@ -185,7 +156,6 @@ with graph.as_default():
 ### TRAINING ###
 
 # Step 5: Begin training.
-num_steps =  STEP_NUM
 
 with tf.Session(graph=graph) as session:
 #, config=tf.ConfigProto(log_device_placement=True)) as session:
@@ -196,10 +166,16 @@ with tf.Session(graph=graph) as session:
     print('Initialized')
 
     average_loss = 0
-    bar = tqdm.tqdm(range(num_steps))
+    bar = tqdm.trange(NUM_STEPS) #tqdm(range(NUM_STEPS))
+    # batch_size, curr_sentence, curr_word, curr_context_word, window_size, data):
+    curr_sentence = 0
+    curr_word =0
+    curr_context_word = 0
     for step in bar:
-        batch_inputs, batch_labels = generate_batch(BATCH_SIZE, step, WINDOW_SIZE, data)
-
+        batch_inputs, batch_labels, cs, cw, ccw = generate_batch(BATCH_SIZE, curr_sentence, curr_word, curr_context_word, WINDOW_SIZE, data)
+        curr_sentence = cs
+        curr_word = cw
+        curr_context_word = ccw
         ### {{{
         # for x, y in zip(batch_inputs, batch_labels):
             # print("[ {}, {} ]".format(reverse_dictionary[x],reverse_dictionary[y]))
@@ -229,11 +205,14 @@ with tf.Session(graph=graph) as session:
                     close_word = reverse_dictionary[nearest[k]]
                     log_str = '%s %s,' % (log_str, close_word)
                 print(log_str)
-        if step == (num_steps - 1):
+        if step == (NUM_STEPS - 1):
             writer.add_run_metadata(run_metadata, 'step%d' % step)
         if step % STEP_CHECK is 0:
             eval.eval(session)
             print("avg loss: "+str(average_loss/step))
+            initial_acc = eval.accuracy_log[0]
+            curr_acc = eval.accuracy_log[len(eval.accuracy_log) - 1]
+            print("accuracy gain: "+str(curr_acc - initial_acc))
     final_embeddings = normalized_embeddings.eval()
 
     ### SAVE VECTORS ###
@@ -257,3 +236,27 @@ with tf.Session(graph=graph) as session:
     projector.visualize_embeddings(writer, config)
 
 writer.close()
+
+# Function to draw visualization of distance between embeddings.
+def plot_with_labels(low_dim_embs, labels, filename):
+    assert low_dim_embs.shape[0] >= len(labels), 'More labels than embeddings'
+    plt.figure(figsize=(18, 18))  # in inches
+    for i, label in enumerate(labels):
+        x, y = low_dim_embs[i, :]
+        plt.scatter(x, y)
+        plt.annotate(
+                    label,
+                    xy=(x, y),
+                    xytext=(5, 2),
+                    textcoords='offset points',
+                    ha='right',
+                    va='bottom'
+                    )
+        plt.savefig(filename)
+
+
+tsne = TSNE(perplexity=30, n_components=2, init='pca', n_iter=5000, method='exact')
+plot_only = 500
+low_dim_embs = tsne.fit_transform(final_embeddings[:plot_only, :])
+labels = [reverse_dictionary[i] for i in range(plot_only)]
+plot_with_labels(low_dim_embs, labels, os.path.join('~/Desktop', 'tsne.png'))
