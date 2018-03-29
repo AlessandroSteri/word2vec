@@ -123,7 +123,7 @@ def main ():
 
 
     # learning_rate
-    for param in [20000, 50000, 100000]:
+    for param in [0.3, 0.7, 1.0]:
         start = time.time()
         train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, param)
         stop  = time.time()
@@ -141,8 +141,11 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
     log(LOG_FILE, str(hyperparameters) + '\n')
 
     # load the training set
+    start = time.time()
     raw_data = read_data(TRAIN_DIR, domain_words=num_domain_words)
-    print('Data size: ', len(raw_data))
+    stop = time.time()
+    dur = stop - start
+    print('Data size: ', len(raw_data), 'time raw_data', dur)
     # the portion of the training set used for data evaluation
 
     valid_size     = 16  # Random set of words to evaluate similarity on.
@@ -151,7 +154,11 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
 
 
     ### CREATE THE DATASET AND WORD-INT MAPPING ###
+    start = time.time()
     data, dictionary, reverse_dictionary = build_dataset(raw_data, vocabulary_size, EXECUTION_ID)
+    stop = time.time()
+    dur = stop - start
+    print('time bult_dataset', dur)
 
     # dump dictionaries
     dict_file = os.path.join("./log/dict", str(EXECUTION_ID))
@@ -313,7 +320,7 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
         num_questions = eval.questions.shape[0]
         final_absolute_accuracy = final_relative_accuracy / (eval.questions.shape[0])
 
-        avg_iteraz_sec = (it_stop - it_start) / num_steps
+        avg_iteraz_sec = num_steps / (it_stop - it_start)
 
 
         final_avg_loss = loss_over_time[len(loss_over_time) - 1]
