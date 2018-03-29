@@ -54,10 +54,10 @@ def main ():
     batch_size       = 128*2 #*2*2*2 #*2 #Number of samples per batch
     embedding_size   = 128 # Dimension of the embedding vector.
     window_size      = 2  # How many words to consider left and right.
-    neg_samples      = 64  # Number of negative examples to sample.
+    neg_samples      = 20  # Number of negative examples to sample.
     vocabulary_size  = 15000 #0 #The most N word to consider in the dictionary
-    num_domain_words = 50000
-    num_steps        = 20000
+    num_domain_words = 800*(10**3)
+    num_steps        = 400*(10**3)
     learning_rate    = 0.5
 
 
