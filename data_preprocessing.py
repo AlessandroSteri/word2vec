@@ -1,3 +1,4 @@
+import os
 import collections
 
 import numpy as np
@@ -174,7 +175,7 @@ def generate_batch(batch_size, curr_sentence, curr_word, curr_context_word, wind
 #       This is the original text but words are replaced by their codes
 # dictionary: map of words(strings) to their codes(integers)
 # reverse_dictionary: maps codes(integers) to words(strings)
-def build_dataset(sentences, vocab_size):
+def build_dataset(sentences, vocab_size, execution_id):
     dictionary = dict()
     reversed_dictionary = dict()
     data = None
@@ -230,12 +231,13 @@ def build_dataset(sentences, vocab_size):
 
     #TODO: taken from course slides^
     # TODO: taken from stackoverflow
-    file_name = 'out/' + str(datetime.datetime.now().date()) + '_' + str(datetime.datetime.now().time()).replace(':', '.') + '_vocabulary.csv'
+    # file_name = 'out/' + str(datetime.datetime.now().date()) + '_' + str(datetime.datetime.now().time()).replace(':', '.') + '_vocabulary.csv'
+    file_name = os.path.join('./log/vocab', str(execution_id) + '.csv')
     # file_name = 'vocabulary.csv'
     with open(file_name,'w') as csvfile:
-        fieldnames=['word','occur']
+        # fieldnames=['word','occur']
         writer=csv.writer(csvfile)
-        writer.writerow(fieldnames)
+        # writer.writerow(fieldnames)
         for key, value in enumerate(vocab.most_common(vocab_size-1)):
             writer.writerow([value[0], value[1]])
 
@@ -265,15 +267,16 @@ def build_dataset(sentences, vocab_size):
 ###
 # Save embedding vectors in a suitable representation for the domain identification task
 ###
-def save_vectors(vectors):
+def save_vectors(vectors, execution_id):
 
     ###FILL HERE###
-    file_name = 'out/' + str(datetime.datetime.now().date()) + '_' + str(datetime.datetime.now().time()).replace(':', '.') + '_vectors.csv'
+    # file_name = 'out/' + str(datetime.datetime.now().date()) + '_' + str(datetime.datetime.now().time()).replace(':', '.') + '_vectors.csv'
+    file_name = os.path.join('./log/vectors', str(execution_id) + '.csv')
     # file_name = 'vector.csv'
     # file_name = time.strftime('%Y%m%d-%H%M%S') + ' - embedding' + '.csv'
     print(vectors)
-    print(vectors.shape)
-    print(vectors[1].shape)
+    # print(vectors.shape)
+    # print(vectors[1].shape)
     np.savetxt(file_name, vectors, delimiter=',')
 
     pass
