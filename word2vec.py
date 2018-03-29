@@ -61,6 +61,13 @@ def main ():
 
     ### CREATE THE DATASET AND WORD-INT MAPPING ###
     data, dictionary, reverse_dictionary = build_dataset(raw_data, VOCABULARY_SIZE, EXECUTION_ID)
+
+    # dump dictionaries
+    dict_file = os.path.join("./log/dict", str(EXECUTION_ID))
+    np.save(dict_file + '.npy', dictionary)
+    inv_dict_file = os.path.join("./log/inv_dict", str(EXECUTION_ID))
+    np.save(inv_dict_file + '.npy', reverse_dictionary)
+
     del raw_data  # Hint to reduce memory.
     # read the question file for the Analogical Reasoning evaluation
     questions = read_analogies(ANALOGIES_FILE, dictionary)
@@ -212,8 +219,8 @@ def main ():
         FINAL_ABSOLUTE_ACCURACY = FINAL_RELATIVE_ACCURACY / (eval.questions.shape[0])
 
         log(LOG_FILE, str([FINAL_RELATIVE_ACCURACY, FINAL_ABSOLUTE_ACCURACY, loss_over_time[len(loss_over_time) - 1]])+ '\n')
-        log_loss(EXECUTION_ID, str(loss_over_time))
-        log_accuracy(EXECUTION_ID, str(eval.accuracy_log))
+        log_loss(EXECUTION_ID, loss_over_time)
+        log_accuracy(EXECUTION_ID, eval.accuracy_log)
         # print('TYPE: {}, LEN: {}'.format(type(eval.questions), len(eval.questions))
 
 
@@ -234,11 +241,11 @@ def main ():
 
     writer.close()
 
-    tsne = TSNE(perplexity=30, n_components=2, init='pca', n_iter=5000, method='exact')
-    plot_only = 500
-    low_dim_embs = tsne.fit_transform(final_embeddings[:plot_only, :])
-    labels = [reverse_dictionary[i] for i in range(plot_only)]
-    plot_with_labels(low_dim_embs, labels, os.path.join('./', 'tsne.png'))
+    # tsne = TSNE(perplexity=30, n_components=2, init='pca', n_iter=5000, method='exact')
+    # plot_only = 500
+    # low_dim_embs = tsne.fit_transform(final_embeddings[:plot_only, :])
+    # labels = [reverse_dictionary[i] for i in range(plot_only)]
+    # plot_with_labels(low_dim_embs, labels, os.path.join('./', 'tsne.png'))
     # pdb.set_trace()
 ### }}} END MAIN
 
@@ -293,13 +300,15 @@ def log(log_file, text_to_log):
 
 def log_accuracy(execution_id, accuracy):
     file_name = os.path.join("./log/accuracy", str(execution_id) + ".csv")
-    with open(file_name, "w") as acc_log:
-        acc_log.write(accuracy)
+    np.savetxt(file_name, np.asarray(accuracy), delimiter=',')
+    # with open(file_name, "w") as acc_log:
+        # acc_log.write(accuracy)
 
 def log_loss(execution_id, loss):
     file_name = os.path.join("./log/loss", str(execution_id) + ".csv")
-    with open(file_name, "w") as loss_log:
-        loss_log.write(loss)
+    np.savetxt(file_name, np.asarray(loss), delimiter=',')
+    # with open(file_name, "w") as loss_log:
+        # loss_log.write(loss)
 
 
 if __name__ == '__main__':
