@@ -30,23 +30,39 @@ VOCABULARY_SIZE = 15000 #0 #The most N word to consider in the dictionary
 # TODO my parameter
 NUM_DOMAIN_WORDS = 50000#160*(10**6) # 0 #00 # was 1000
 NUM_STEPS        = 20000 #0 #0 #0
-STEP_CHECK       = 500
+STEP_CHECK       = 5000
 #
 TRAIN_DIR        = "dataset/DATA/TRAIN"
 VALID_DIR        = "dataset/DATA/DEV"
 TMP_DIR          = "/tmp/"
 ANALOGIES_FILE   = "dataset/eval/questions-words.txt"
 
+# hyper_params = [0.5, 1.0, 2.0]
+LEARNING_RATE = 0.5
+
 LOG_FILE = "./log/log_to_plot.txt"
 
 ### MAIN {{{
 def main ():
+    RUN_ID = int(time.time())
+    log('./log/times/' + str(RUN_ID) + '.txt', "Run ID: " + str(RUN_ID) + '\n')
+    hyper_params = [3, 4, 5] #, 150] #, 200]
+    for param in hyper_params:
+        global NEG_SAMPLES
+        NEG_SAMPLES = param
+        start = time.time()
+        train()
+        stop = time.time()
+        log('./log/times/' + str(RUN_ID) + '.txt', "Param: " + str(param) + " Completion time (min): " + str(int((stop-start)/60))+'\n')
+
+def train():
+    print(NEG_SAMPLES)
     # Need a 'sort-of' unique id for execution
     EXECUTION_ID = int(time.time()*100)
     HYPERPARAMETERS = [BATCH_SIZE, EMBEDDING_SIZE, WINDOW_SIZE, NEG_SAMPLES, VOCABULARY_SIZE, NUM_DOMAIN_WORDS, NUM_STEPS, STEP_CHECK]
 
     # minimal log to save different executions and select hyperparameters
-    log(LOG_FILE, "Execution ID: " + str(EXECUTION_ID) + '\n')
+    log(LOG_FILE, "ExecutionID:" + str(EXECUTION_ID) + ':')
     log(LOG_FILE, str(HYPERPARAMETERS) + '\n')
 
     # load the training set
@@ -126,7 +142,7 @@ def main ():
         with tf.name_scope('optimizer'):
             # TODO: taken from slides
             # was: optimizer = None ###FILL HERE ###
-            optimizer = tf.train.GradientDescentOptimizer(0.5).minimize(loss)
+            optimizer = tf.train.GradientDescentOptimizer(LEARNING_RATE).minimize(loss)
 
         # Compute the cosine similarity between minibatch examples and all embeddings.
         norm = tf.sqrt(tf.reduce_sum(tf.square(embeddings), 1, keep_dims=True))
@@ -165,6 +181,7 @@ def main ():
         curr_sentence = 0
         curr_word =0
         curr_context_word = 0
+        it_start = time.time()
         for step in bar:
             batch_inputs, batch_labels, cs, cw, ccw = generate_batch(BATCH_SIZE, curr_sentence, curr_word, curr_context_word, WINDOW_SIZE, data)
             curr_sentence = cs
@@ -208,6 +225,8 @@ def main ():
                 initial_acc = eval.accuracy_log[0]
                 curr_acc = eval.accuracy_log[len(eval.accuracy_log) - 1]
                 print("accuracy gain: "+str(curr_acc - initial_acc))
+
+        it_stop = time.time()
         final_embeddings = normalized_embeddings.eval()
 
         ### SAVE VECTORS ###
@@ -218,7 +237,11 @@ def main ():
         FINAL_RELATIVE_ACCURACY = eval.accuracy_log[len(eval.accuracy_log) - 1]
         FINAL_ABSOLUTE_ACCURACY = FINAL_RELATIVE_ACCURACY / (eval.questions.shape[0])
 
-        log(LOG_FILE, str([FINAL_RELATIVE_ACCURACY, FINAL_ABSOLUTE_ACCURACY, loss_over_time[len(loss_over_time) - 1]])+ '\n')
+        AVG_ITERAZ_SEC = (it_stop - it_start) / NUM_STEPS
+
+
+        FINAL_AVG_LOSS = loss_over_time[len(loss_over_time) - 1]
+        log(LOG_FILE, str([FINAL_RELATIVE_ACCURACY, FINAL_ABSOLUTE_ACCURACY, FINAL_AVG_LOSS, AVG_ITERAZ_SEC])+ '\n')
         log_loss(EXECUTION_ID, loss_over_time)
         log_accuracy(EXECUTION_ID, eval.accuracy_log)
         # print('TYPE: {}, LEN: {}'.format(type(eval.questions), len(eval.questions))
@@ -247,7 +270,9 @@ def main ():
     # labels = [reverse_dictionary[i] for i in range(plot_only)]
     # plot_with_labels(low_dim_embs, labels, os.path.join('./', 'tsne.png'))
     # pdb.set_trace()
+
 ### }}} END MAIN
+
 
 ### READ THE TEXT FILES ###
 # Read the data into a list of strings.
@@ -292,6 +317,7 @@ def plot_with_labels(low_dim_embs, labels, filename):
                     va='bottom'
                     )
         plt.savefig(filename)
+
 
 # appends text_to_log to log_file
 def log(log_file, text_to_log):
