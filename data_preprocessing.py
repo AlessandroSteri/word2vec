@@ -270,17 +270,15 @@ def build_dataset(sentences, vocab_size, execution_id):
 def save_vectors(vectors, execution_id):
 
     ###FILL HERE###
+    # start = time()
     # file_name = 'out/' + str(datetime.datetime.now().date()) + '_' + str(datetime.datetime.now().time()).replace(':', '.') + '_vectors.csv'
     file_name = os.path.join('./log/vectors', str(execution_id) + '.csv')
     # file_name = 'vector.csv'
     # file_name = time.strftime('%Y%m%d-%H%M%S') + ' - embedding' + '.csv'
-    print(vectors)
-    # print(vectors.shape)
-    # print(vectors[1].shape)
+    # print(vectors)
     np.savetxt(file_name, vectors, delimiter=',')
-
-    pass
-
+    # stop = time()
+    # print("Save vector costs: {} sec.".format(stop - start))
 
 # Reads through the analogy question file.
 #    Returns:
