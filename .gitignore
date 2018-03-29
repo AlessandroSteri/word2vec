@@ -2,3 +2,5 @@ dataset/
 __pycache__/
 .ropeproject/
 *.csv
+tsne.png
+log
