@@ -2,7 +2,6 @@ import os
 import collections
 
 import numpy as np
-import datetime
 
 import nltk
 import csv
@@ -10,8 +9,10 @@ import string
 import re
 from time import time
 import ipdb
+
 UNK = "<UNK>"
 UNK_INDEX = 0
+STOPWORDS_FILE = './stopwords2.txt'
 
 batch_time = 0
 batch_index = 0
@@ -181,66 +182,71 @@ def build_dataset(sentences, vocab_size, execution_id):
     data = None
 
     ###FILL HERE###
-
-    stopwords_file = './stopwords2.txt'
-    # stopwords_file = './stopwords_full.txt'
-    #TODO: taken from course slides:
-    stopwords = get_stopwords(stopwords_file)
-    vocab = collections.Counter()
-
-    # tokenizer = nltk.tokenizer.casual.casual
-    for sentence in sentences:
-        for w in sentence:
-            if w == '': # or w in stopwords:
-                continue
-            if '\\' in w:
-                # remove wiki markdown
-                # print('[build_dataset] Word with \ : {}'.format(w))
-                continue
-            if any(c.isdigit() for c in w):
-                # print('[build_dataset] Word with digit: {}'.format(w))
-                continue
-            if len(w) <= 2:
-                # remove most of stop words, remove also up which is ineresting
-                # print('[build_dataset] Word with less than 2: {}'.format(w))
-                continue
-            if w == '' or w in stopwords:
-                continue
-
-            char_to_take_of = set(string.punctuation)
-            # allow word like new york
-            # TODO: remove -.
-            # char_to_take_of.pop('-')
-            # allow u.s.a.
-            # char_to_take_of.pop('.')
-            w_no_char = "".join(char for char in w if char not in char_to_take_of)
-            if '..' not in w_no_char:
-                w_no_char =  w_no_char.rstrip('-.').lstrip('-.')
-            else:
-                # preserving acronyms
-                w_no_char =  w_no_char.rstrip('-').lstrip('-')
-                w_no_char = w_no_char.replace('..', '.')
-
-
-            if len(w_no_char) <= 2 or w_no_char in stopwords:
-                # remove most of stop words, remove also up which is ineresting
-                # print('[build_dataset] Word with less than 2: {}'.format(w))
-                continue
-            vocab[w_no_char] += 1
-    # print("Distinct words: ", len(vocab))
+    vocab = data_to_vocab(sentences)
+    # ##
+    # stopwords_file = './stopwords2.txt'
+    # # stopwords_file = './stopwords_full.txt'
+    # #TODO: taken from course slides:
+    # stopwords = get_stopwords(stopwords_file)
+    #
+    # vocab = collections.Counter()
+    #
+    # # tokenizer = nltk.tokenizer.casual.casual
+    # for sentence in sentences:
+    #     for w in sentence:
+    #         if w == '': # or w in stopwords:
+    #             continue
+    #         if '\\' in w:
+    #             # remove wiki markdown
+    #             # print('[build_dataset] Word with \ : {}'.format(w))
+    #             continue
+    #         if any(c.isdigit() for c in w):
+    #             # print('[build_dataset] Word with digit: {}'.format(w))
+    #             continue
+    #         if len(w) <= 2:
+    #             # remove most of stop words, remove also up which is ineresting
+    #             # print('[build_dataset] Word with less than 2: {}'.format(w))
+    #             continue
+    #         if w == '' or w in stopwords:
+    #             continue
+    #
+    #         char_to_take_of = set(string.punctuation)
+    #         # allow word like new york
+    #         # TODO: remove -.
+    #         # char_to_take_of.pop('-')
+    #         # allow u.s.a.
+    #         # char_to_take_of.pop('.')
+    #         w_no_char = "".join(char for char in w if char not in char_to_take_of)
+    #         if '..' not in w_no_char:
+    #             w_no_char =  w_no_char.rstrip('-.').lstrip('-.')
+    #         else:
+    #             # preserving acronyms
+    #             w_no_char =  w_no_char.rstrip('-').lstrip('-')
+    #             w_no_char = w_no_char.replace('..', '.')
+    #
+    #
+    #         if len(w_no_char) <= 2 or w_no_char in stopwords:
+    #             # remove most of stop words, remove also up which is ineresting
+    #             # print('[build_dataset] Word with less than 2: {}'.format(w))
+    #             continue
+    #         vocab[w_no_char] += 1
+    # # print("Distinct words: ", len(vocab))
+    # ###
 
     #TODO: taken from course slides^
-    # TODO: taken from stackoverflow
-    # file_name = 'out/' + str(datetime.datetime.now().date()) + '_' + str(datetime.datetime.now().time()).replace(':', '.') + '_vocabulary.csv'
-    file_name = os.path.join('./log/vocab', str(execution_id) + '.csv')
-    # file_name = 'vocabulary.csv'
-    with open(file_name,'w') as csvfile:
-        # fieldnames=['word','occur']
-        writer=csv.writer(csvfile)
-        # writer.writerow(fieldnames)
-        for key, value in enumerate(vocab.most_common(vocab_size-1)):
-            writer.writerow([value[0], value[1]])
 
+    # save vocab to csv file
+    vocab_t_csv(vocab, vocab_size, execution_id)
+# ###
+#     # TODO: taken from stackoverflow
+#     file_name = os.path.join('./log/vocab', str(execution_id) + '.csv')
+#     with open(file_name,'w') as csvfile:
+#         # fieldnames=['word','occur']
+#         writer=csv.writer(csvfile)
+#         # writer.writerow(fieldnames)
+#         for key, value in enumerate(vocab.most_common(vocab_size-1)):
+#             writer.writerow([value[0], value[1]])
+# ###
     # Build dictionary
     for index, word_occurrency in enumerate(vocab.most_common(vocab_size-1)):
         # vocab_size -1 to leave one spot for UNK
@@ -333,6 +339,61 @@ def apply_dictionary(x_list, dictionary, unk_key):
     return y_list
 
 ### MY HELPER FUNCTIONS ###
+def data_to_vocab(sentences):
+    # stopwords_file = './stopwords2.txt'
+    # stopwords_file = './stopwords_full.txt'
+    #TODO: taken from course slides:
+    stopwords = get_stopwords(STOPWORDS_FILE)
+    vocab = collections.Counter()
+    # tokenizer = nltk.tokenizer.casual.casual
+    for sentence in sentences:
+        for w in sentence:
+            if w == '': # or w in stopwords:
+                continue
+            if '\\' in w:
+                # remove wiki markdown
+                # print('[build_dataset] Word with \ : {}'.format(w))
+                continue
+            if any(c.isdigit() for c in w):
+                # print('[build_dataset] Word with digit: {}'.format(w))
+                continue
+            if len(w) <= 2:
+                # remove most of stop words, remove also up which is ineresting
+                # print('[build_dataset] Word with less than 2: {}'.format(w))
+                continue
+            if w == '' or w in stopwords:
+                continue
 
-# def is_acronym():
-    # acr = r'(?:[a-z]\.)+'
+            char_to_take_of = set(string.punctuation)
+            # allow word like new york
+            # TODO: remove -.
+            # char_to_take_of.pop('-')
+            # allow u.s.a.
+            # char_to_take_of.pop('.')
+            w_no_char = "".join(char for char in w if char not in char_to_take_of)
+            if '..' not in w_no_char:
+                w_no_char =  w_no_char.rstrip('-.').lstrip('-.')
+            else:
+                # preserving acronyms
+                w_no_char =  w_no_char.rstrip('-').lstrip('-')
+                w_no_char = w_no_char.replace('..', '.')
+
+
+            if len(w_no_char) <= 2 or w_no_char in stopwords:
+                # remove most of stop words, remove also up which is ineresting
+                # print('[build_dataset] Word with less than 2: {}'.format(w))
+                continue
+            vocab[w_no_char] += 1
+    # print("Distinct words: ", len(vocab))
+    return vocab
+    ###
+
+def vocab_t_csv(vocab, vocab_size, execution_id):
+    # TODO: taken from stackoverflow
+    file_name = os.path.join('./log/vocab', str(execution_id) + '.csv')
+    with open(file_name,'w') as csvfile:
+        # fieldnames=['word','occur']
+        writer=csv.writer(csvfile)
+        # writer.writerow(fieldnames)
+        for key, value in enumerate(vocab.most_common(vocab_size-1)):
+            writer.writerow([value[0], value[1]])
