@@ -41,7 +41,7 @@ def main ():
     cmdLineParser.add_argument("vocabulary_size", type=int, help="(At most) Number of known words.")
     cmdLineParser.add_argument("num_domain_words", type=int, help="Number of words for each domain.")
     cmdLineParser.add_argument("num_steps", type=int, help="number of training iterations")
-    cmdLineParser.add_argument("learning_rate", type=int, help="base learning rate")
+    cmdLineParser.add_argument("learning_rate", type=float, help="base learning rate")
     cmdLineArgs = cmdLineParser.parse_args()
 
     batch_size       = cmdLineArgs.batch_size
