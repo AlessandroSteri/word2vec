@@ -11,158 +11,86 @@ from evaluation import evaluation
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 
-import pdb
+import argparse
+
 import time
+import pdb
 
 # run on CPU
 # comment this part if you want to run it on GPU
 # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
 # os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
-### PARAMETERS ###
-'''
-# BATCH_SIZE -> [ 32, 128, 256, 512, 1024, 2048 ]
-BATCH_SIZE      = 128*2 #*2*2*2 #*2 #Number of samples per batch
-EMBEDDING_SIZE   = 128 # Dimension of the embedding vector.
-WINDOW_SIZE      = 2  # How many words to consider left and right.
-NEG_SAMPLES      = 64  # Number of negative examples to sample.
-VOCABULARY_SIZE  = 15000 #0 #The most N word to consider in the dictionary
-
-# TODO my parameter
-NUM_DOMAIN_WORDS = 50000#160*(10**6) # 0 #00 # was 1000
-NUM_STEPS        = 20000 #0 #0 #0
-#
-# hyper_params   = [0.5, 1.0, 2.0]
-LEARNING_RATE    = 0.5
- '''
-
-TRAIN_DIR        = "dataset/DATA/TRAIN"
-VALID_DIR        = "dataset/DATA/DEV"
-TMP_DIR          = "/tmp/"
-ANALOGIES_FILE   = "dataset/eval/questions-words.txt"
-
-
-STEP_CHECK       = 10000
-LOG_FILE = "./log/log_to_plot.txt"
+### CONSTANTS ###
+TRAIN_DIR      = "dataset/DATA/TRAIN"
+VALID_DIR      = "dataset/DATA/DEV"
+TMP_DIR        = "/tmp/"
+ANALOGIES_FILE = "dataset/eval/questions-words.txt"
+STEP_CHECK     = 10000 # Every how many step to check and to log accuracy/loss.
+# LOG_FILE       = "./log/log_to_plot.txt"
+log_dirs       = ['log', 'log/executions', 'log/accuracy', 'log/loss', 'log/dict', 'log/inv_dict', 'vectors', 'log/vocab', 'loss/caching']
 
 ### MAIN {{{
 def main ():
-    # Need a 'sort-of' unique id for runs
-    # RUN_ID = int(time.time())
-    #
-    # # defaults
-    # batch_size       = 128*2 #*2*2*2 #*2 #Number of samples per batch
-    # embedding_size   = 128 # Dimension of the embedding vector.
-    # window_size      = 2  # How many words to consider left and right.
-    # neg_samples      = 20  # Number of negative examples to sample.
-    # vocabulary_size  = 15000 #0 #The most N word to consider in the dictionary
-    # num_domain_words = 800*(10**3)
-    # num_steps        = 400*(10**3)
-    # learning_rate    = 0.5
+    ### CLI args ###
+    cmdLineParser = argparse.ArgumentParser()
+    cmdLineParser.add_argument("batch_size", type=str, help="Number of samples per batch.")
+    cmdLineParser.add_argument("embedding_size", type=str, help="Dimension of the embedding vector.")
+    cmdLineParser.add_argument("window_size", type=str, help="How many context words to consider left and right drom pivot word.")
+    cmdLineParser.add_argument("neg_samples", type=str, help="Number of negative examples to sample for skipgram model.")
+    cmdLineParser.add_argument("vocabulary_size", type=str, help="(At most) Number of known words.")
+    cmdLineParser.add_argument("num_domain_words", type=str, help="Number of words for each domain.")
+    cmdLineParser.add_argument("num_steps", type=str, help="number of training iterations")
+    cmdLineParser.add_argument("learning_rate", type=str, help="base learning rate")
+    cmdLineArgs = cmdLineParser.parse_args()
+
+    batch_size       = cmdLineArgs.batch_size
+    embedding_size   = cmdLineArgs.embedding_size
+    window_size      = cmdLineArgs.window_size
+    neg_samples      = cmdLineArgs.neg_samples
+    vocabulary_size  = cmdLineArgs.vocabulary_size
+    num_domain_words = cmdLineArgs.num_domain_words
+    num_steps        = cmdLineArgs.num_steps
+    learning_rate    = cmdLineArgs.learning_rate
+
+    hyperparameters = [batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate]
+
+    # Need for a 'sort-of' unique, ordered id to identify different executions in log.
+    execution_id = int(time.time()*100)
+
+    # Creates directory needed for log.
+    for directory in log_dirs:
+        if not os.path.exists(directory):
+            os.makedirs(directory)
 
 
-    # log
-    # hyperparameters = [batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, STEP_CHECK, learning_rate]
-    # log('./log/times/' + str(RUN_ID) + '.txt', "Run ID:" + str(RUN_ID) + ':' + str(hyperparameters) + '\n')
+    # Pre-exec log.
+    log('./log/executions/' + str(execution_id) + '.txt', "Execution ID:" + str(execution_id) + ':' + str(hyperparameters) + '\n')
 
-
-
-    RUN_ID = int(time.time())
-    hyperparameters = (32, 128, 2, 5, 15000, 800000, 8000000, 1)
-    log('./log/times/' + str(RUN_ID) + '.txt', "Run ID:" + str(RUN_ID) + ':' + str(hyperparameters) + '\n')
+    # Execution
     start = time.time()
-    train(*hyperparameters)
+    train(*hyperparameters, execution_id)
     stop  = time.time()
-    log('./log/times/' + str(RUN_ID) + '.txt', " Completion time (min): " + str(int((stop-start)/60))+'\n')
 
-    RUN_ID = int(time.time())
-    hyperparameters = (32, 128, 2, 5, 45000, 8000000, 80000000, 1)
-    log('./log/times/' + str(RUN_ID) + '.txt', "Run ID:" + str(RUN_ID) + ':' + str(hyperparameters) + '\n')
-    start = time.time()
-    train(*hyperparameters)
-    stop  = time.time()
-    log('./log/times/' + str(RUN_ID) + '.txt', " Completion time (min): " + str(int((stop-start)/60))+'\n')
+    # Post-exec log.
+    log('./log/executions/' + str(execution_id) + '.txt', "----Completion time (min): " + str(int((stop-start)/60))+'\n')
+### }}} END MAIN
 
-    # # batch_size
-    # for param in [32, 128*4, 128*16]:
-    #     start = time.time()
-    #     train(param, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate)
-    #     stop  = time.time()
-    #     log('./log/times/' + str(RUN_ID) + '.txt', "BATCH_SIZE: " + str(param) + " Completion time (min): " + str(int((stop-start)/60))+'\n')
-    #
-    #
-    # # embedding_size
-    # for param in [150, 280, 400]:
-    #     start = time.time()
-    #     train(batch_size, param, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate)
-    #     stop  = time.time()
-    #     log('./log/times/' + str(RUN_ID) + '.txt', "EMBEDDING_SIZE: " + str(param) + " Completion time (min): " + str(int((stop-start)/60))+'\n')
-    #
-    #
-    # # window_size
-    # for param in [1, 3, 4]:
-    #     start = time.time()
-    #     train(batch_size, embedding_size, param, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate)
-    #     stop  = time.time()
-    #     log('./log/times/' + str(RUN_ID) + '.txt', "WINDOW_SIZE: " + str(param) + " Completion time (min): " + str(int((stop-start)/60))+'\n')
-    #
-    #
-    # # neg_sample
-    # for param in [1, 3, 5]:
-    #     start = time.time()
-    #     train(batch_size, embedding_size, window_size, param, vocabulary_size, num_domain_words, num_steps, learning_rate)
-    #     stop  = time.time()
-    #     log('./log/times/' + str(RUN_ID) + '.txt', "NEG_SAMPLE: " + str(param) + " Completion time (min): " + str(int((stop-start)/60))+'\n')
-    #
-    #
-    # # vocabulary_size
-    # for param in [20000, 50000, 100000]:
-    #     start = time.time()
-    #     train(batch_size, embedding_size, window_size, neg_samples, param, num_domain_words, num_steps, learning_rate)
-    #     stop  = time.time()
-    #     log('./log/times/' + str(RUN_ID) + '.txt', "VOCABULARY_SIZE: " + str(param) + " Completion time (min): " + str(int((stop-start)/60))+'\n')
-    #
-    #
-    # # num_domain_words
-    # for param in [200*(10**3), 800*(10**3), 1600*(10**3)]:
-    #     start = time.time()
-    #     train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size, param, num_steps, learning_rate)
-    #     stop  = time.time()
-    #     log('./log/times/' + str(RUN_ID) + '.txt', "NUM_DOMAIN_WORDS: " + str(param) + " Completion time (min): " + str(int((stop-start)/60))+'\n')
-    #
-    #
-    # # num_step
-    # for param in [200*(10**3), 200*(10**3), 200*(10**3)]:
-    #     start = time.time()
-    #     train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, param, learning_rate)
-    #     stop  = time.time()
-    #     log('./log/times/' + str(RUN_ID) + '.txt', "NUM_STEPS: " + str(param) + " Completion time (min): " + str(int((stop-start)/60))+'\n')
-    #
-    #
-    # # learning_rate
-    # for param in [0.3, 0.7, 1.0]:
-    #     start = time.time()
-    #     train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, param)
-    #     stop  = time.time()
-    #     log('./log/times/' + str(RUN_ID) + '.txt', "VOCABULARY_SIZE: " + str(param) + " Completion time (min): " + str(int((stop-start)/60))+'\n')
+def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate, execution_id):
 
-
-def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate):
-    # Need a 'sort-of' unique id for execution
-    EXECUTION_ID    = int(time.time()*100)
     hyperparameters = [batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, STEP_CHECK, learning_rate]
     print(hyperparameters)
 
     # minimal log to save different executions and select hyperparameters
-    log(LOG_FILE, "ExecutionID:" + str(EXECUTION_ID) + ':')
-    log(LOG_FILE, str(hyperparameters) + '\n')
+    # log(LOG_FILE, "ExecutionID:" + str(execution_id) + ':')
+    # log(LOG_FILE, str(hyperparameters) + '\n')
 
     # load the training set
     start = time.time()
     raw_data = read_data(TRAIN_DIR, domain_words=num_domain_words)
     stop = time.time()
     dur = stop - start
-    print('Data size: ', len(raw_data), 'time raw_data', dur)
+    print('Data size: ', len(raw_data), 'Time raw_data: ', dur)
     # the portion of the training set used for data evaluation
 
     valid_size     = 16  # Random set of words to evaluate similarity on.
@@ -172,15 +100,15 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
 
     ### CREATE THE DATASET AND WORD-INT MAPPING ###
     start = time.time()
-    data, dictionary, reverse_dictionary = build_dataset(raw_data, vocabulary_size, EXECUTION_ID)
+    data, dictionary, reverse_dictionary = build_dataset(raw_data, vocabulary_size, execution_id)
     stop = time.time()
     dur = stop - start
-    print('time bult_dataset', dur)
+    print('Time bult_dataset: ', dur)
 
     # dump dictionaries
-    dict_file = os.path.join("./log/dict", str(EXECUTION_ID))
+    dict_file = os.path.join("./log/dict", str(execution_id))
     np.save(dict_file + '.npy', dictionary)
-    inv_dict_file = os.path.join("./log/inv_dict", str(EXECUTION_ID))
+    inv_dict_file = os.path.join("./log/inv_dict", str(execution_id))
     np.save(inv_dict_file + '.npy', reverse_dictionary)
 
     del raw_data  # Hint to reduce memory.
@@ -204,7 +132,6 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
 
         ### FILL HERE ###{{{
 
-        ### }}}
         # TODO:                 taken from slides
         embeddings            = tf.Variable(tf.random_uniform([vocabulary_size, embedding_size], -1.0, 1.0))
         # ^ was embeddings    = tf.Variable() #placeholder variable
@@ -330,20 +257,23 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
 
         ### SAVE VECTORS ###
 
-        save_vectors(final_embeddings, EXECUTION_ID)
+        save_vectors(final_embeddings, execution_id)
         # my function but is commented cause works only using gui on mbp
         eval.plot()
+
         final_relative_accuracy = eval.accuracy_log[len(eval.accuracy_log) - 1]
         num_questions = eval.questions.shape[0]
-        final_absolute_accuracy = final_relative_accuracy / (eval.questions.shape[0])
+        # final_absolute_accuracy = final_relative_accuracy / (eval.questions.shape[0])
 
         avg_iteraz_sec = num_steps / (it_stop - it_start)
 
 
         final_avg_loss = loss_over_time[len(loss_over_time) - 1]
-        log(LOG_FILE, str([final_relative_accuracy, num_questions, final_absolute_accuracy, final_avg_loss, avg_iteraz_sec])+ '\n')
-        log_loss(EXECUTION_ID, loss_over_time)
-        log_accuracy(EXECUTION_ID, eval.accuracy_log)
+        acc_perc = final_relative_accuracy * 100.0 / num_questions
+        log('./log/executions/' + str(execution_id) + '.txt', "Acc: " + str(final_relative_accuracy) + "Acc%: " + str(acc_perc) + "It/s: " + str(avg_iteraz_sec) + "Loss: " + str(final_avg_loss) +'\n')
+        # log(LOG_FILE, str([final_relative_accuracy, num_questions, final_absolute_accuracy, final_avg_loss, avg_iteraz_sec])+ '\n')
+        log_loss(execution_id, loss_over_time)
+        log_accuracy(execution_id, eval.accuracy_log)
         # print('TYPE: {}, LEN: {}'.format(type(eval.questions), len(eval.questions))
 
 
@@ -371,7 +301,6 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
     # plot_with_labels(low_dim_embs, labels, os.path.join('./', 'tsne.png'))
     # pdb.set_trace()
 
-### }}} END MAIN
 
 
 ### READ THE TEXT FILES ###
