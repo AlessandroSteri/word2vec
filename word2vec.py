@@ -270,7 +270,7 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
 
         final_avg_loss = loss_over_time[len(loss_over_time) - 1]
         acc_perc = final_relative_accuracy * 100.0 / num_questions
-        log('./log/executions/' + str(execution_id) + '.txt', "Acc: " + str(final_relative_accuracy) + "Acc%: " + str(acc_perc) + "It/s: " + str(avg_iteraz_sec) + "Loss: " + str(final_avg_loss) +'\n')
+        log('./log/executions/' + str(execution_id) + '.txt', "Acc: " + str(final_relative_accuracy) + " Acc%: " + str(acc_perc) + " It/s: " + str(avg_iteraz_sec) + " Loss: " + str(final_avg_loss) +'\n')
         # log(LOG_FILE, str([final_relative_accuracy, num_questions, final_absolute_accuracy, final_avg_loss, avg_iteraz_sec])+ '\n')
         log_loss(execution_id, loss_over_time)
         log_accuracy(execution_id, eval.accuracy_log)
