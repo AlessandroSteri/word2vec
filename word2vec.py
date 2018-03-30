@@ -34,14 +34,14 @@ log_dirs       = ['log', 'log/executions', 'log/accuracy', 'log/loss', 'log/dict
 def main ():
     ### CLI args ###
     cmdLineParser = argparse.ArgumentParser()
-    cmdLineParser.add_argument("batch_size", type=str, help="Number of samples per batch.")
-    cmdLineParser.add_argument("embedding_size", type=str, help="Dimension of the embedding vector.")
-    cmdLineParser.add_argument("window_size", type=str, help="How many context words to consider left and right drom pivot word.")
-    cmdLineParser.add_argument("neg_samples", type=str, help="Number of negative examples to sample for skipgram model.")
-    cmdLineParser.add_argument("vocabulary_size", type=str, help="(At most) Number of known words.")
-    cmdLineParser.add_argument("num_domain_words", type=str, help="Number of words for each domain.")
-    cmdLineParser.add_argument("num_steps", type=str, help="number of training iterations")
-    cmdLineParser.add_argument("learning_rate", type=str, help="base learning rate")
+    cmdLineParser.add_argument("batch_size", type=int, help="Number of samples per batch.")
+    cmdLineParser.add_argument("embedding_size", type=int, help="Dimension of the embedding vector.")
+    cmdLineParser.add_argument("window_size", type=int, help="How many context words to consider left and right drom pivot word.")
+    cmdLineParser.add_argument("neg_samples", type=int, help="Number of negative examples to sample for skipgram model.")
+    cmdLineParser.add_argument("vocabulary_size", type=int, help="(At most) Number of known words.")
+    cmdLineParser.add_argument("num_domain_words", type=int, help="Number of words for each domain.")
+    cmdLineParser.add_argument("num_steps", type=int, help="number of training iterations")
+    cmdLineParser.add_argument("learning_rate", type=int, help="base learning rate")
     cmdLineArgs = cmdLineParser.parse_args()
 
     batch_size       = cmdLineArgs.batch_size
