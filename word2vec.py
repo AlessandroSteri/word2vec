@@ -48,86 +48,103 @@ LOG_FILE = "./log/log_to_plot.txt"
 ### MAIN {{{
 def main ():
     # Need a 'sort-of' unique id for runs
-    RUN_ID = int(time.time())
-
-    # defaults
-    batch_size       = 128*2 #*2*2*2 #*2 #Number of samples per batch
-    embedding_size   = 128 # Dimension of the embedding vector.
-    window_size      = 2  # How many words to consider left and right.
-    neg_samples      = 20  # Number of negative examples to sample.
-    vocabulary_size  = 15000 #0 #The most N word to consider in the dictionary
-    num_domain_words = 800*(10**3)
-    num_steps        = 400*(10**3)
-    learning_rate    = 0.5
+    # RUN_ID = int(time.time())
+    #
+    # # defaults
+    # batch_size       = 128*2 #*2*2*2 #*2 #Number of samples per batch
+    # embedding_size   = 128 # Dimension of the embedding vector.
+    # window_size      = 2  # How many words to consider left and right.
+    # neg_samples      = 20  # Number of negative examples to sample.
+    # vocabulary_size  = 15000 #0 #The most N word to consider in the dictionary
+    # num_domain_words = 800*(10**3)
+    # num_steps        = 400*(10**3)
+    # learning_rate    = 0.5
 
 
     # log
-    hyperparameters = [batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, STEP_CHECK, learning_rate]
+    # hyperparameters = [batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, STEP_CHECK, learning_rate]
+    # log('./log/times/' + str(RUN_ID) + '.txt', "Run ID:" + str(RUN_ID) + ':' + str(hyperparameters) + '\n')
+
+
+
+    RUN_ID = int(time.time())
+    hyperparameters = (32, 128, 2, 5, 15000, 800000, 8000000, 1)
     log('./log/times/' + str(RUN_ID) + '.txt', "Run ID:" + str(RUN_ID) + ':' + str(hyperparameters) + '\n')
+    start = time.time()
+    train(*hyperparameters)
+    stop  = time.time()
+    log('./log/times/' + str(RUN_ID) + '.txt', " Completion time (min): " + str(int((stop-start)/60))+'\n')
 
+    RUN_ID = int(time.time())
+    hyperparameters = (32, 128, 2, 5, 45000, 8000000, 80000000, 1)
+    log('./log/times/' + str(RUN_ID) + '.txt', "Run ID:" + str(RUN_ID) + ':' + str(hyperparameters) + '\n')
+    start = time.time()
+    train(*hyperparameters)
+    stop  = time.time()
+    log('./log/times/' + str(RUN_ID) + '.txt', " Completion time (min): " + str(int((stop-start)/60))+'\n')
 
-    # batch_size
-    for param in [32, 128*4, 128*16]:
-        start = time.time()
-        train(param, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate)
-        stop  = time.time()
-        log('./log/times/' + str(RUN_ID) + '.txt', "BATCH_SIZE: " + str(param) + " Completion time (min): " + str(int((stop-start)/60))+'\n')
-
-
-    # embedding_size
-    for param in [150, 280, 400]:
-        start = time.time()
-        train(batch_size, param, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate)
-        stop  = time.time()
-        log('./log/times/' + str(RUN_ID) + '.txt', "EMBEDDING_SIZE: " + str(param) + " Completion time (min): " + str(int((stop-start)/60))+'\n')
-
-
-    # window_size
-    for param in [1, 3, 4]:
-        start = time.time()
-        train(batch_size, embedding_size, param, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate)
-        stop  = time.time()
-        log('./log/times/' + str(RUN_ID) + '.txt', "WINDOW_SIZE: " + str(param) + " Completion time (min): " + str(int((stop-start)/60))+'\n')
-
-
-    # neg_sample
-    for param in [1, 3, 5]:
-        start = time.time()
-        train(batch_size, embedding_size, window_size, param, vocabulary_size, num_domain_words, num_steps, learning_rate)
-        stop  = time.time()
-        log('./log/times/' + str(RUN_ID) + '.txt', "NEG_SAMPLE: " + str(param) + " Completion time (min): " + str(int((stop-start)/60))+'\n')
-
-
-    # vocabulary_size
-    for param in [20000, 50000, 100000]:
-        start = time.time()
-        train(batch_size, embedding_size, window_size, neg_samples, param, num_domain_words, num_steps, learning_rate)
-        stop  = time.time()
-        log('./log/times/' + str(RUN_ID) + '.txt', "VOCABULARY_SIZE: " + str(param) + " Completion time (min): " + str(int((stop-start)/60))+'\n')
-
-
-    # num_domain_words
-    for param in [200*(10**3), 800*(10**3), 1600*(10**3)]:
-        start = time.time()
-        train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size, param, num_steps, learning_rate)
-        stop  = time.time()
-        log('./log/times/' + str(RUN_ID) + '.txt', "NUM_DOMAIN_WORDS: " + str(param) + " Completion time (min): " + str(int((stop-start)/60))+'\n')
-
-
-    # num_step
-    for param in [200*(10**3), 200*(10**3), 200*(10**3)]:
-        start = time.time()
-        train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, param, learning_rate)
-        stop  = time.time()
-        log('./log/times/' + str(RUN_ID) + '.txt', "NUM_STEPS: " + str(param) + " Completion time (min): " + str(int((stop-start)/60))+'\n')
-
-
-    # learning_rate
-    for param in [0.3, 0.7, 1.0]:
-        start = time.time()
-        train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, param)
-        stop  = time.time()
-        log('./log/times/' + str(RUN_ID) + '.txt', "VOCABULARY_SIZE: " + str(param) + " Completion time (min): " + str(int((stop-start)/60))+'\n')
+    # # batch_size
+    # for param in [32, 128*4, 128*16]:
+    #     start = time.time()
+    #     train(param, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate)
+    #     stop  = time.time()
+    #     log('./log/times/' + str(RUN_ID) + '.txt', "BATCH_SIZE: " + str(param) + " Completion time (min): " + str(int((stop-start)/60))+'\n')
+    #
+    #
+    # # embedding_size
+    # for param in [150, 280, 400]:
+    #     start = time.time()
+    #     train(batch_size, param, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate)
+    #     stop  = time.time()
+    #     log('./log/times/' + str(RUN_ID) + '.txt', "EMBEDDING_SIZE: " + str(param) + " Completion time (min): " + str(int((stop-start)/60))+'\n')
+    #
+    #
+    # # window_size
+    # for param in [1, 3, 4]:
+    #     start = time.time()
+    #     train(batch_size, embedding_size, param, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate)
+    #     stop  = time.time()
+    #     log('./log/times/' + str(RUN_ID) + '.txt', "WINDOW_SIZE: " + str(param) + " Completion time (min): " + str(int((stop-start)/60))+'\n')
+    #
+    #
+    # # neg_sample
+    # for param in [1, 3, 5]:
+    #     start = time.time()
+    #     train(batch_size, embedding_size, window_size, param, vocabulary_size, num_domain_words, num_steps, learning_rate)
+    #     stop  = time.time()
+    #     log('./log/times/' + str(RUN_ID) + '.txt', "NEG_SAMPLE: " + str(param) + " Completion time (min): " + str(int((stop-start)/60))+'\n')
+    #
+    #
+    # # vocabulary_size
+    # for param in [20000, 50000, 100000]:
+    #     start = time.time()
+    #     train(batch_size, embedding_size, window_size, neg_samples, param, num_domain_words, num_steps, learning_rate)
+    #     stop  = time.time()
+    #     log('./log/times/' + str(RUN_ID) + '.txt', "VOCABULARY_SIZE: " + str(param) + " Completion time (min): " + str(int((stop-start)/60))+'\n')
+    #
+    #
+    # # num_domain_words
+    # for param in [200*(10**3), 800*(10**3), 1600*(10**3)]:
+    #     start = time.time()
+    #     train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size, param, num_steps, learning_rate)
+    #     stop  = time.time()
+    #     log('./log/times/' + str(RUN_ID) + '.txt', "NUM_DOMAIN_WORDS: " + str(param) + " Completion time (min): " + str(int((stop-start)/60))+'\n')
+    #
+    #
+    # # num_step
+    # for param in [200*(10**3), 200*(10**3), 200*(10**3)]:
+    #     start = time.time()
+    #     train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, param, learning_rate)
+    #     stop  = time.time()
+    #     log('./log/times/' + str(RUN_ID) + '.txt', "NUM_STEPS: " + str(param) + " Completion time (min): " + str(int((stop-start)/60))+'\n')
+    #
+    #
+    # # learning_rate
+    # for param in [0.3, 0.7, 1.0]:
+    #     start = time.time()
+    #     train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, param)
+    #     stop  = time.time()
+    #     log('./log/times/' + str(RUN_ID) + '.txt', "VOCABULARY_SIZE: " + str(param) + " Completion time (min): " + str(int((stop-start)/60))+'\n')
 
 
 def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate):
