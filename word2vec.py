@@ -28,7 +28,7 @@ TMP_DIR        = "/tmp/"
 ANALOGIES_FILE = "dataset/eval/questions-words.txt"
 STEP_CHECK     = 10000 # Every how many step to check and to log accuracy/loss.
 # LOG_FILE       = "./log/log_to_plot.txt"
-log_dirs       = ['log', 'log/executions', 'log/accuracy', 'log/loss', 'log/dict', 'log/inv_dict', 'vectors', 'log/vocab', 'loss/caching']
+log_dirs       = ['log', 'log/executions', 'log/accuracy', 'log/loss', 'log/dict', 'log/inv_dict', 'log/vectors', 'log/vocab', 'log/caching']
 
 ### MAIN {{{
 def main ():
@@ -65,7 +65,7 @@ def main ():
 
 
     # Pre-exec log.
-    log('./log/executions/' + str(execution_id) + '.txt', "Execution ID:" + str(execution_id) + ':' + str(hyperparameters) + '\n')
+    log('./log/executions/' + 'log' + '.txt', "Execution ID:" + str(execution_id) + ':' + str(hyperparameters) + '\n')
 
     # Execution
     start = time.time()
@@ -73,7 +73,7 @@ def main ():
     stop  = time.time()
 
     # Post-exec log.
-    log('./log/executions/' + str(execution_id) + '.txt', "----Completion time (min): " + str(int((stop-start)/60))+'\n')
+    log('./log/executions/' + 'log' + '.txt', "----Completion time (min): " + str(int((stop-start)/60))+'\n')
 ### }}} END MAIN
 
 def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate, execution_id):
@@ -270,7 +270,7 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
 
         final_avg_loss = loss_over_time[len(loss_over_time) - 1]
         acc_perc = final_relative_accuracy * 100.0 / num_questions
-        log('./log/executions/' + str(execution_id) + '.txt', "Acc: " + str(final_relative_accuracy) + " Acc%: " + str(acc_perc) + " It/s: " + str(avg_iteraz_sec) + " Loss: " + str(final_avg_loss) +'\n')
+        log('./log/executions/' + 'log' + '.txt', "Acc: " + str(final_relative_accuracy) + " Acc%: " + str(acc_perc) + " It/s: " + str(avg_iteraz_sec) + " Loss: " + str(final_avg_loss) +'\n')
         # log(LOG_FILE, str([final_relative_accuracy, num_questions, final_absolute_accuracy, final_avg_loss, avg_iteraz_sec])+ '\n')
         log_loss(execution_id, loss_over_time)
         log_accuracy(execution_id, eval.accuracy_log)
