@@ -65,16 +65,19 @@ def main ():
 
 
     # Pre-exec log.
-    log('./log/executions/' + 'log' + '.txt', "Execution ID:" + str(execution_id) + ':' + str(hyperparameters) + '\n')
+    log('./log/executions/' + str(execution_id) + '.txt', "Execution ID:" + str(execution_id) + ':' + str(hyperparameters) + '\n')
 
     # Execution
     start = time.time()
-    train(*hyperparameters, execution_id)
+    final_relative_accuracy, acc_perc, avg_iteraz_sec, final_avg_loss = train(*hyperparameters, execution_id)
     stop  = time.time()
 
-    # Post-exec log.
+    # Post-exec log, only executions carried out till completion.
+    log('./log/executions/' + 'log' + '.txt', "Execution ID:" + str(execution_id) + ':' + str(hyperparameters) + '\n')
+    log('./log/executions/' + 'log' + '.txt', "Acc: " + str(final_relative_accuracy) + " Acc%: " + str(acc_perc) + " It/s: " + str(avg_iteraz_sec) + " Loss: " + str(final_avg_loss) +'\n')
     log('./log/executions/' + 'log' + '.txt', "----Completion time (min): " + str(int((stop-start)/60))+'\n')
 ### }}} END MAIN
+
 
 def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate, execution_id):
 
@@ -270,11 +273,11 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
 
         final_avg_loss = loss_over_time[len(loss_over_time) - 1]
         acc_perc = final_relative_accuracy * 100.0 / num_questions
-        log('./log/executions/' + 'log' + '.txt', "Acc: " + str(final_relative_accuracy) + " Acc%: " + str(acc_perc) + " It/s: " + str(avg_iteraz_sec) + " Loss: " + str(final_avg_loss) +'\n')
         # log(LOG_FILE, str([final_relative_accuracy, num_questions, final_absolute_accuracy, final_avg_loss, avg_iteraz_sec])+ '\n')
         log_loss(execution_id, loss_over_time)
         log_accuracy(execution_id, eval.accuracy_log)
         # print('TYPE: {}, LEN: {}'.format(type(eval.questions), len(eval.questions))
+
 
 
         # Write corresponding labels for the embeddings.
@@ -302,6 +305,7 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
     # pdb.set_trace()
 
 
+    return final_relative_accuracy, acc_perc, avg_iteraz_sec, final_avg_loss
 
 ### READ THE TEXT FILES ###
 # Read the data into a list of strings.
