@@ -3,7 +3,7 @@
 
 
 ####  batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate
-python word2vec.py 32 128 1 5 150 8000 2000 1 # test execution
+# python word2vec.py 32 128 1 5 150 8000 2000 1 # test execution
 
 # test neg sample
 # python word2vec.py 32 128 1 10 15000 800000 400000 1 # 222 20min

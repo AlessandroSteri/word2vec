@@ -74,11 +74,11 @@ def main ():
 
     # Post-exec log, only executions carried out till completion.
     log('./log/executions/' + 'log' + '.txt', "Execution ID:" + str(execution_id) + ':' + str(hyperparameters) + '\n')
-    log('./log/executions/' + 'log' + '.txt', "Acc: " + str(final_relative_accuracy) + " Acc%: " + str(acc_perc) + " It/s: " + str(avg_iteraz_sec) + " Loss: " + str(final_avg_loss) + '\n')
+    log('./log/executions/' + 'log' + '.txt', "Acc: " + str(final_relative_accuracy) + ", Acc%: " + str(acc_perc) + "%, It/s: " + str(avg_iteraz_sec) + ", Loss: " + str(final_avg_loss) + '\n')
 
     training_pairs, used_training_pairs, coverage, coverage_unk = coverage_data
 
-    log('./log/executions/' + 'log' + '.txt', "training_pairs: " + str(training_pairs) + " used_training_pairs: " + str(used_training_pairs) + " coverage: " + str(coverage) + " coverage_unk: " + str(coverage_unk) + " NumWord: " + str(data_size )+ '\n')
+    log('./log/executions/' + 'log' + '.txt', "training_pairs: " + str(training_pairs) + ", used_training_pairs: " + str(used_training_pairs) + ", coverage: " + str(coverage) + "%, coverage_unk: " + str(coverage_unk) + "%, NumWord: " + str(data_size )+ '\n')
     log('./log/executions/' + 'log' + '.txt', "----Completion time (min): " + str(int((stop-start)/60))+'\n')
 ### }}} END MAIN
 
