@@ -5,7 +5,7 @@ import tensorflow as tf
 import numpy as np
 import tqdm
 from tensorboard.plugins import projector
-from data_preprocessing import generate_batch, build_dataset, save_vectors, read_analogies
+from data_preprocessing import generate_batch, build_dataset, save_vectors, read_analogies, get_training_set_coverage
 from evaluation import evaluation
 
 from sklearn.manifold import TSNE
@@ -69,12 +69,16 @@ def main ():
 
     # Execution
     start = time.time()
-    final_relative_accuracy, acc_perc, avg_iteraz_sec, final_avg_loss = train(*hyperparameters, execution_id)
+    final_relative_accuracy, acc_perc, avg_iteraz_sec, final_avg_loss, data_size, coverage_data = train(*hyperparameters, execution_id)
     stop  = time.time()
 
     # Post-exec log, only executions carried out till completion.
     log('./log/executions/' + 'log' + '.txt', "Execution ID:" + str(execution_id) + ':' + str(hyperparameters) + '\n')
-    log('./log/executions/' + 'log' + '.txt', "Acc: " + str(final_relative_accuracy) + " Acc%: " + str(acc_perc) + " It/s: " + str(avg_iteraz_sec) + " Loss: " + str(final_avg_loss) +'\n')
+    log('./log/executions/' + 'log' + '.txt', "Acc: " + str(final_relative_accuracy) + " Acc%: " + str(acc_perc) + " It/s: " + str(avg_iteraz_sec) + " Loss: " + str(final_avg_loss) + '\n')
+
+    training_pairs, used_training_pairs, coverage, coverage_unk = coverage_data
+
+    log('./log/executions/' + 'log' + '.txt', "training_pairs: " + str(training_pairs) + " used_training_pairs: " + str(used_training_pairs) + " coverage: " + str(coverage) + " coverage_unk: " + str(coverage_unk) + "NumWord: " + data_size + '\n')
     log('./log/executions/' + 'log' + '.txt', "----Completion time (min): " + str(int((stop-start)/60))+'\n')
 ### }}} END MAIN
 
@@ -94,6 +98,17 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
     stop = time.time()
     dur = stop - start
     print('Data size: ', len(raw_data), 'Time raw_data: ', dur)
+
+    # Data stat to log
+    num_sentences = len(raw_data)
+    data_size = 0
+    for s in raw_data:
+        data_size += len(s)
+        print(s)
+        time.sleep(2)
+
+     # TODO delete is just for test
+    coverage = get_training_set_coverage(data_size)
     # the portion of the training set used for data evaluation
 
     valid_size     = 16  # Random set of words to evaluate similarity on.
@@ -304,8 +319,9 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
     # plot_with_labels(low_dim_embs, labels, os.path.join('./', 'tsne.png'))
     # pdb.set_trace()
 
+    coverage_data = get_training_set_coverage(data_size)
 
-    return final_relative_accuracy, acc_perc, avg_iteraz_sec, final_avg_loss
+    return final_relative_accuracy, acc_perc, avg_iteraz_sec, final_avg_loss, data_size, coverage_data
 
 ### READ THE TEXT FILES ###
 # Read the data into a list of strings.

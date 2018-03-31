@@ -397,3 +397,11 @@ def vocab_t_csv(vocab, vocab_size, execution_id):
         # writer.writerow(fieldnames)
         for key, value in enumerate(vocab.most_common(vocab_size-1)):
             writer.writerow([value[0], value[1]])
+
+
+def get_training_set_coverage(data_size):
+    global training_pairs
+    global used_training_pairs
+    coverage = used_training_pairs * 100 / data_size
+    coverage_unk = training_pairs * 100 / data_size
+    return training_pairs, used_training_pairs, coverage, coverage_unk
