@@ -274,9 +274,6 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
         it_stop = time.time()
         final_embeddings = normalized_embeddings.eval()
 
-        ### SAVE VECTORS ###
-
-        save_vectors(final_embeddings, execution_id)
         # my function but is commented cause works only using gui on mbp
         eval.plot()
 
@@ -295,6 +292,10 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
         # print('TYPE: {}, LEN: {}'.format(type(eval.questions), len(eval.questions))
 
 
+        ### SAVE VECTORS ###
+
+        if final_relative_accuracy > 1000:
+            save_vectors(final_embeddings, execution_id)
 
         # Write corresponding labels for the embeddings.
         with open(TMP_DIR + 'metadata.tsv', 'w') as f:
