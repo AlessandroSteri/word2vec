@@ -26,7 +26,7 @@ def main():
 
 
     plt.figure(1)
-    plt.plot(to_plot, iterations, other_to_plot, o_iterations)  # , time_opt, val_opt)
+    plt.plot(iterations, to_plot, o_iterations, other_to_plot)  # , time_opt, val_opt)
     plt.legend((id_exec, other_id_exec ))
     plt.title(id_exec + ' vs ' + other_id_exec)
     plt.ylabel(plot)
