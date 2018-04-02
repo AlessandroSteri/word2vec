@@ -19,9 +19,10 @@ def main():
     directory = cmdLineArgs.dir
 
     to_plot = np.loadtxt(os.path.join(directory, plot, id_exec + '.csv'), delimiter=',')
-    iterations = list(range(1, len(to_plot) + 1))
+    iterations = [10000*i for i in list(range(1, len(to_plot) + 1))]
     other_to_plot = np.loadtxt(os.path.join(directory, plot, other_id_exec + '.csv'), delimiter=',')
-    o_iterations = list(range(1, len(other_to_plot) + 1))
+    # o_iterations = list(range(1, len(other_to_plot) + 1))
+    o_iterations = [10000*i for i in list(range(1, len(other_to_plot) + 1))]
     # print(a)
 
 
