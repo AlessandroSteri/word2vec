@@ -59,8 +59,6 @@ def main ():
     learning_rate    = cmdLineArgs.learning_rate
     decay = cmdLineArgs.decay
     step_rate = cmdLineArgs.step_rate
-    # decay_step = step_rate[0]
-    # decay_rate = step_rate[1]
     print("DECAY: ", decay, step_rate)
 
     hyperparameters = [batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate, decay, step_rate]
@@ -95,18 +93,14 @@ def main ():
 
 def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate, decay, step_rate, execution_id):
 
-    hyperparameters = [batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, STEP_CHECK, learning_rate]
-    print(hyperparameters)
-
-    # minimal log to save different executions and select hyperparameters
-    # log(LOG_FILE, "ExecutionID:" + str(execution_id) + ':')
-    # log(LOG_FILE, str(hyperparameters) + '\n')
+    hyperparameters = [batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate, decay, step_rate, execution_id]
+    print('Current Execution: ', hyperparameters)
 
     # load the training set
-    start = time.time()
+    start    = time.time()
     raw_data = read_data(TRAIN_DIR, domain_words=num_domain_words)
-    stop = time.time()
-    dur = stop - start
+    stop     = time.time()
+    dur      = stop - start
     print('Data size: ', len(raw_data), 'Time raw_data: ', dur)
 
     # Data stat to log
@@ -116,12 +110,9 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
         data_size += len(s)
 
 
-     # TODO delete is just for test
-    coverage = get_training_set_coverage(data_size)
-    print("Data_Size: ", data_size, coverage)
-    time.sleep(2)
-    # the portion of the training set used for data evaluation
+    print("Data_Size: ", data_size)
 
+    # the portion of the training set used for data evaluation
     valid_size     = 16  # Random set of words to evaluate similarity on.
     valid_window   = 100  # Only pick dev samples in the head of the distribution.
     valid_examples = np.random.choice(valid_window, valid_size, replace=False)
@@ -130,28 +121,24 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
     ### CREATE THE DATASET AND WORD-INT MAPPING ###
     start = time.time()
     data, dictionary, reverse_dictionary = build_dataset(raw_data, vocabulary_size, execution_id)
-    stop = time.time()
-    dur = stop - start
+    stop  = time.time()
+    dur   = stop - start
     print('Time bult_dataset: ', dur)
 
     # dump dictionaries
-    dict_file = os.path.join("./log/dict", str(execution_id))
+    dict_file     = os.path.join("./log/dict", str(execution_id))
     np.save(dict_file + '.npy', dictionary)
     inv_dict_file = os.path.join("./log/inv_dict", str(execution_id))
     np.save(inv_dict_file + '.npy', reverse_dictionary)
 
     del raw_data  # Hint to reduce memory.
+
     # read the question file for the Analogical Reasoning evaluation
     questions = read_analogies(ANALOGIES_FILE, dictionary)
 
-    print('Total words occurencies: {}'.format(len(data)))
-
-
     ### MODEL DEFINITION ###
-
     graph = tf.Graph()
     eval  = None
-
     with graph.as_default():
         # Define input data tensors.
         with tf.name_scope('inputs'):
@@ -165,7 +152,6 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
         embeddings            = tf.Variable(tf.random_uniform([vocabulary_size, embedding_size], -1.0, 1.0))
         # ^ was embeddings    = tf.Variable() #placeholder variable
         # emb_bias            = tf.Variable(tf.random_normal(EMBEDDING_SIZE)) #placeholder variable
-        ### FILL HERE ###{{{
         # TODO:                 taken from slides
         # selects column from index instead of product
         hidden_representation = tf.nn.embedding_lookup(embeddings, train_inputs)
@@ -190,7 +176,7 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
                 num_sampled=neg_samples,
                 num_classes=vocabulary_size))
 
-            # Add the loss value as a scalar to summary.
+        # Add the loss value as a scalar to summary.
         tf.summary.scalar('loss', loss)
 
         # Construct the SGD optimizer using a learning rate of 1.0.
@@ -199,13 +185,17 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
             # was: optimizer = None ###FILL HERE ###
             decay_learning_rate = None
             if not decay:
+                # constant learning rate
                 optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss)
             else:
+                # decay
                 global_step = tf.Variable(0, trainable=False)
                 intitial_learning_rate = learning_rate
                 decay_step = int(step_rate[0])  #100000
                 decay_rate = float(step_rate[1])  #0.96
                 decay_learning_rate = tf.train.exponential_decay(intitial_learning_rate, global_step, decay_step, decay_rate, staircase=True)
+                # decay_learning_rate = tf.train.cosine_decay(intitial_learning_rate, global_step, decay_step, name=None)
+
                 optimizer = tf.train.GradientDescentOptimizer(decay_learning_rate).minimize(loss, global_step=global_step)
 
         # Compute the cosine similarity between minibatch examples and all embeddings.
@@ -227,11 +217,10 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
         eval = evaluation(normalized_embeddings, dictionary, questions)
 
     ### TRAINING ###
-
     # Step 5: Begin training.
-
     with tf.Session(graph=graph) as session:
     #, config=tf.ConfigProto(log_device_placement=True)) as session:
+
         # Open a writer to write summaries.
         writer = tf.summary.FileWriter(TMP_DIR, session.graph)
         # We must initialize all variables before we use them.
@@ -240,8 +229,7 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
 
         average_loss = 0
         loss_over_time = []
-        bar = tqdm.trange(num_steps) #tqdm(range(num_steps))
-        # batch_size, curr_sentence, curr_word, curr_context_word, window_size, data):
+        bar = tqdm.trange(num_steps)
         curr_sentence = 0
         curr_word =0
         curr_context_word = 0
@@ -252,6 +240,7 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
             curr_sentence = cs
             curr_word = cw
             curr_context_word = ccw
+
             ### {{{
             # for x, y in zip(batch_inputs, batch_labels):
                 # print("[ {}, {} ]".format(reverse_dictionary[x],reverse_dictionary[y]))
@@ -271,10 +260,6 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
             writer.add_summary(summary, step)
             # Add metadata to visualize the graph for the last run.
             if step % STEP_CHECK == 0:
-                if decay:
-                    if step % decay_step == 0:
-                        lerning_rate_over_time.append(float(decay_learning_rate.eval()))
-                    print("Decay lr: ", decay_learning_rate.eval())
                 sim = similarity.eval()
                 for i in range(valid_size):
                     valid_word = reverse_dictionary[valid_examples[i]]
@@ -294,6 +279,10 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
                 initial_acc = eval.accuracy_log[0]
                 curr_acc = eval.accuracy_log[len(eval.accuracy_log) - 1]
                 print("accuracy gain: "+str(curr_acc - initial_acc))
+                if decay:
+                    if step % decay_step == 0:
+                        lerning_rate_over_time.append(float(decay_learning_rate.eval()))
+                    print("Decay lr: ", decay_learning_rate.eval())
 
         it_stop = time.time()
         final_embeddings = normalized_embeddings.eval()
@@ -307,20 +296,15 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
 
         avg_iteraz_sec = num_steps / (it_stop - it_start)
 
-
         final_avg_loss = loss_over_time[len(loss_over_time) - 1]
         acc_perc = final_relative_accuracy * 100.0 / num_questions
-        # log(LOG_FILE, str([final_relative_accuracy, num_questions, final_absolute_accuracy, final_avg_loss, avg_iteraz_sec])+ '\n')
         log_loss(execution_id, loss_over_time)
         log_accuracy(execution_id, eval.accuracy_log)
         if decay:
             log_learning_rate(execution_id, lerning_rate_over_time)
-        # print('TYPE: {}, LEN: {}'.format(type(eval.questions), len(eval.questions))
-
 
         ### SAVE VECTORS ###
-
-        if final_relative_accuracy > 1000:
+        if final_relative_accuracy > 2000:
             save_vectors(final_embeddings, execution_id)
 
         # Write corresponding labels for the embeddings.
