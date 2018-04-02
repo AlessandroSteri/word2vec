@@ -28,7 +28,10 @@ TMP_DIR        = "/tmp/"
 ANALOGIES_FILE = "dataset/eval/questions-words.txt"
 STEP_CHECK     = 10000 # Every how many step to check and to log accuracy/loss.
 # LOG_FILE       = "./log/log_to_plot.txt"
-log_dirs       = ['log', 'log/executions', 'log/accuracy', 'log/loss', 'log/dict', 'log/inv_dict', 'log/vectors', 'log/vocab', 'log/caching']
+log_dirs       = ['log', 'log/executions', 'log/accuracy', 'log/loss', 'log/dict', 'log/inv_dict', 'log/vectors', 'log/vocab', 'log/caching', 'log/lr']
+
+decay_step = 100000
+decay_rate = 0.96
 
 ### MAIN {{{
 def main ():
@@ -42,6 +45,8 @@ def main ():
     cmdLineParser.add_argument("num_domain_words", type=int, help="Number of words for each domain.")
     cmdLineParser.add_argument("num_steps", type=int, help="number of training iterations")
     cmdLineParser.add_argument("learning_rate", type=float, help="base learning rate")
+    cmdLineParser.add_argument('step_rate', nargs='*', default=[], help='[decay step, decay rate]')
+    cmdLineParser.add_argument("--decay", dest="decay", action='store_true')
     cmdLineArgs = cmdLineParser.parse_args()
 
     batch_size       = cmdLineArgs.batch_size
@@ -52,8 +57,13 @@ def main ():
     num_domain_words = cmdLineArgs.num_domain_words
     num_steps        = cmdLineArgs.num_steps
     learning_rate    = cmdLineArgs.learning_rate
+    decay = cmdLineArgs.decay
+    step_rate = cmdLineArgs.step_rate
+    # decay_step = step_rate[0]
+    # decay_rate = step_rate[1]
+    print("DECAY: ", decay, step_rate)
 
-    hyperparameters = [batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate]
+    hyperparameters = [batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate, decay, step_rate]
 
     # Need for a 'sort-of' unique, ordered id to identify different executions in log.
     execution_id = int(time.time()*100)
@@ -83,7 +93,7 @@ def main ():
 ### }}} END MAIN
 
 
-def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate, execution_id):
+def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate, decay, step_rate, execution_id):
 
     hyperparameters = [batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, STEP_CHECK, learning_rate]
     print(hyperparameters)
@@ -187,7 +197,16 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
         with tf.name_scope('optimizer'):
             # TODO: taken from slides
             # was: optimizer = None ###FILL HERE ###
-            optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss)
+            decay_learning_rate = None
+            if not decay:
+                optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss)
+            else:
+                global_step = tf.Variable(0, trainable=False)
+                intitial_learning_rate = learning_rate
+                decay_step = int(step_rate[0])  #100000
+                decay_rate = float(step_rate[1])  #0.96
+                decay_learning_rate = tf.train.exponential_decay(intitial_learning_rate, global_step, decay_step, decay_rate, staircase=True)
+                optimizer = tf.train.GradientDescentOptimizer(decay_learning_rate).minimize(loss, global_step=global_step)
 
         # Compute the cosine similarity between minibatch examples and all embeddings.
         norm = tf.sqrt(tf.reduce_sum(tf.square(embeddings), 1, keep_dims=True))
@@ -227,6 +246,7 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
         curr_word =0
         curr_context_word = 0
         it_start = time.time()
+        lerning_rate_over_time = []
         for step in bar:
             batch_inputs, batch_labels, cs, cw, ccw = generate_batch(batch_size, curr_sentence, curr_word, curr_context_word, window_size, data)
             curr_sentence = cs
@@ -251,6 +271,10 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
             writer.add_summary(summary, step)
             # Add metadata to visualize the graph for the last run.
             if step % STEP_CHECK == 0:
+                if decay:
+                    if step % decay_step == 0:
+                        lerning_rate_over_time.append(float(decay_learning_rate.eval()))
+                    print("Decay lr: ", decay_learning_rate.eval())
                 sim = similarity.eval()
                 for i in range(valid_size):
                     valid_word = reverse_dictionary[valid_examples[i]]
@@ -289,6 +313,8 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
         # log(LOG_FILE, str([final_relative_accuracy, num_questions, final_absolute_accuracy, final_avg_loss, avg_iteraz_sec])+ '\n')
         log_loss(execution_id, loss_over_time)
         log_accuracy(execution_id, eval.accuracy_log)
+        if decay:
+            log_learning_rate(execution_id, lerning_rate_over_time)
         # print('TYPE: {}, LEN: {}'.format(type(eval.questions), len(eval.questions))
 
 
@@ -386,6 +412,10 @@ def log_loss(execution_id, loss):
     np.savetxt(file_name, np.asarray(loss), delimiter=',')
     # with open(file_name, "w") as loss_log:
         # loss_log.write(loss)
+
+def log_learning_rate(execution_id, rate):
+    file_name = os.path.join("./log/lr", str(execution_id) + ".csv")
+    np.savetxt(file_name, np.asarray(rate), delimiter=',')
 
 
 if __name__ == '__main__':
