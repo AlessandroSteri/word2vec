@@ -132,7 +132,7 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
     training_pairs, epoch, coverage, training_set_cardinality = coverage
     print("Training Set Cardinality: ", cardinality)
     print("Epoch: ", epoch)
-    print("Coverage: {}%".format(coverage)
+    print("Coverage: {}%".format(coverage))
 
 
 
@@ -304,7 +304,7 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
                 print("Min_local_accuracy: ", local_min_acc)
                 print("Training Set Cardinality: ", cardinality)
                 print("Epoch: ", epoch)
-                print("Coverage: {}%".format(coverage)
+                print("Coverage: {}%".format(coverage))
                 if decay:
                     if step % decay_step == 0:
                         lerning_rate_over_time.append(float(decay_learning_rate.eval()))
