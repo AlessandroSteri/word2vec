@@ -5,7 +5,7 @@ import tensorflow as tf
 import numpy as np
 import tqdm
 from tensorboard.plugins import projector
-from data_preprocessing import generate_batch, build_dataset, save_vectors, read_analogies, get_training_set_coverage
+from data_preprocessing import generate_batch, build_dataset, save_vectors, read_analogies, get_training_set_coverage, compute_training_set_cardinality
 from evaluation import evaluation
 
 from sklearn.manifold import TSNE
@@ -84,9 +84,11 @@ def main ():
     log('./log/executions/' + 'log' + '.txt', "Execution ID:" + str(execution_id) + ':' + str(hyperparameters) + '\n')
     log('./log/executions/' + 'log' + '.txt', "Acc: " + str(final_relative_accuracy) + ", Acc%: " + str(acc_perc) + "%, It/s: " + str(avg_iteraz_sec) + ", Loss: " + str(final_avg_loss) + '\n')
 
-    training_pairs, used_training_pairs, coverage, coverage_unk = coverage_data
+    # training_pairs, used_training_pairs, coverage, coverage_unk = coverage_data
+    training_pairs, epoch, coverage, training_set_cardinality = coverage_data
 
-    log('./log/executions/' + 'log' + '.txt', "training_pairs: " + str(training_pairs) + ", used_training_pairs: " + str(used_training_pairs) + ", coverage: " + str(coverage) + "%, coverage_unk: " + str(coverage_unk) + "%, NumWord: " + str(data_size )+ '\n')
+
+    log('./log/executions/' + 'log' + '.txt', "training_pairs: " + str(training_pairs) + ", epoch: " + str(epoch) + ", coverage: " + str(coverage) + "%, Training_set_card: " + str(training_set_cardinality)+ '\n')
     log('./log/executions/' + 'log' + '.txt', "----Completion time (min): " + str(int((stop-start)/60))+'\n')
 ### }}} END MAIN
 
@@ -101,7 +103,7 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
     raw_data = read_data(TRAIN_DIR, domain_words=num_domain_words)
     stop     = time.time()
     dur      = stop - start
-    print('Data size: ', len(raw_data), 'Time raw_data: ', dur)
+    print('Raw Data size: ', len(raw_data), 'Time raw_data: ', dur)
 
     # Data stat to log
     num_sentences = len(raw_data)
@@ -124,6 +126,13 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
     stop  = time.time()
     dur   = stop - start
     print('Time bult_dataset: ', dur)
+
+    cardinality = compute_training_set_cardinality(window_size, data)
+    print("Training Set Cardinality: ", cardinality)
+    print("epoch: ", (batch_size*num_steps) / cardinality)
+    print("Coverage: {}%".format((batch_size*num_steps*100) / cardinality))
+
+
 
     # dump dictionaries
     dict_file     = os.path.join("./log/dict", str(execution_id))
@@ -273,6 +282,7 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
             if step == (num_steps - 1):
                 writer.add_run_metadata(run_metadata, 'step%d' % step)
             if step % STEP_CHECK is 0:
+                print('Current Execution: ', hyperparameters)
                 eval.eval(session)
                 print("avg loss: "+str(average_loss/step))
                 loss_over_time.append(average_loss/step)
@@ -331,7 +341,7 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
     # plot_with_labels(low_dim_embs, labels, os.path.join('./', 'tsne.png'))
     # pdb.set_trace()
 
-    coverage_data = get_training_set_coverage(data_size)
+    coverage_data = get_training_set_coverage(batch_size, num_steps, cardinality)
 
     return final_relative_accuracy, acc_perc, avg_iteraz_sec, final_avg_loss, data_size, coverage_data
 

@@ -16,8 +16,8 @@ STOPWORDS_FILE = './stopwords2.txt'
 
 batch_time = 0
 batch_index = 0
-training_pairs = 0
-used_training_pairs = 0
+# training_pairs = 0
+# used_training_pairs = 0
 ### generate_batch ###
 # This function generates the train data and label batch from the dataset.
 #
@@ -39,8 +39,8 @@ def generate_batch(batch_size, curr_sentence, curr_word, curr_context_word, wind
     ###FILL HERE###
     global batch_time
     # global batch_index
-    global training_pairs
-    global used_training_pairs
+    # global training_pairs
+    # global used_training_pairs
 
     # if curr_batch % 1000 == 0:
     #     print("training_pairs: {}, used_training_pairs: {}".format(training_pairs,
@@ -81,11 +81,11 @@ def generate_batch(batch_size, curr_sentence, curr_word, curr_context_word, wind
             else:
                 context_word = window[processed_context_words]
                 processed_context_words +=1
-                training_pairs += 1
+                # training_pairs += 1
                 pivot_word = sentence[processed_words]
                 # print('PW: {}, CW: {}'.format(pivot_word, context_word))
                 if pivot_word != UNK_INDEX and context_word != UNK_INDEX and context_word != pivot_word:
-                    used_training_pairs += 1
+                    # used_training_pairs += 1
                     train_data.append(pivot_word)
                     labels.append(context_word)
                     # print('Train data:\n{}'.format(train_data))
@@ -399,9 +399,37 @@ def vocab_t_csv(vocab, vocab_size, execution_id):
             writer.writerow([value[0], value[1]])
 
 
-def get_training_set_coverage(data_size):
-    global training_pairs
-    global used_training_pairs
-    coverage = used_training_pairs * 100 / data_size
-    coverage_unk = training_pairs * 100 / data_size
-    return training_pairs, used_training_pairs, coverage, coverage_unk
+def get_training_set_coverage(batch_size, num_steps, training_set_cardinality):
+    # global training_pairs
+    # global used_training_pairs
+    coverage =  (batch_size * num_steps * 100) / training_set_cardinality
+    epoch =  (batch_size * num_steps) / training_set_cardinality
+    # coverage_unk = training_pairs * 100 / training_set_cardinality
+    training_pairs = batch_size * num_steps
+    return training_pairs, epoch, coverage, training_set_cardinality
+
+def compute_training_set_cardinality(window_size, data):
+    # if curr_batch % 1000 == 0:
+    #     print("training_pairs: {}, used_training_pairs: {}".format(training_pairs,
+    #           used_training_pairs))
+    #     print('Batch time: {}'.format(batch_time))
+    num_training_pairs = 0
+    # training_pairs_not_unk = 0
+    start = time()
+    # while len(train_data) < batch_size:
+    for sentence in data:
+            # print('inside sentence: {}'.format(processed_sentences))
+            # Other words to process in current sentence
+        for pivot_word in sentence:
+            # window = None
+            window = sentence[max(pivot_word - window_size, 0):min(pivot_word + window_size, len(sentence)) + 1]
+            for context_word in window:
+                # training_pairs += 1
+                if pivot_word != UNK_INDEX and context_word != UNK_INDEX and context_word != pivot_word:
+                    num_training_pairs += 1
+                    # used_training_pairs += 1
+
+    stop = time()
+    dur = stop - start
+    print('Time spent computing training set cardinality: {}'.format(dur))
+    return num_training_pairs

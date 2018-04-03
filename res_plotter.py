@@ -22,7 +22,7 @@ def main():
     iterations = [10000*i for i in list(range(1, len(to_plot) + 1))]
     other_to_plot = np.loadtxt(os.path.join(directory, 'lr', id_exec + '.csv'), delimiter=',')
     # o_iterations = list(range(1, len(other_to_plot) + 1))
-    other_to_plot = [ 3190*i for i in other_to_plot ]
+    other_to_plot = [ 3190*(1-i) for i in other_to_plot ]
     o_iterations = [100000*i for i in list(range(1, len(other_to_plot) + 1))]
     # print(a)
 

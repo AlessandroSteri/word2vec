@@ -7,6 +7,7 @@ from sklearn.neural_network import MLPClassifier
 from sklearn import svm
 from sklearn.neighbors.nearest_centroid import NearestCentroid
 from sklearn import tree
+from sklearn.linear_model import SGDClassifier
 
 from word2vec import TRAIN_DIR
 from word2vec import VALID_DIR
@@ -18,8 +19,6 @@ from data_preprocessing import UNK
 def main():
     exec_id = '152269643520'
     embedding_size = 200
-    trainig_set = []
-    labels = []
 
     num_file_words = 1000000
     num_pec_words = 1000000
@@ -29,19 +28,9 @@ def main():
 
     vocabulary, vectors, dictionary, inv_dictionary, emb_dictionary = recover_execution_environment(exec_id)
 
+    trainig_set, labels = build_training_dataset(training_files, vocabulary, emb_dictionary, embedding_size, num_file_words, num_file_to_use=1000)
     # num_files = 10000
-    for i in tqdm.trange(len(training_files)):
-        f, domain = training_files[i]
-        try:
-            centroid = file_to_centroid_vec(f, vocabulary, emb_dictionary,embedding_size, num_file_words)
-        except ZeroDivisionError as e:
-            continue
-        trainig_set.append(centroid)
-        labels.append(domain)
-        # if i == 1000:
-            # break
-        # if num_files == i:
-            # break
+
 
     print("Training")
     clf_mlp = training_mlp(trainig_set, labels)
@@ -51,22 +40,34 @@ def main():
     clf_ncc.fit(trainig_set, labels)
     clf_dtr = tree.DecisionTreeClassifier()
     clf_dtr.fit(trainig_set, labels)
+    clf_sgd = SGDClassifier(loss="hinge", penalty="l2")
+    clf_sgd.fit(trainig_set, labels)
+    clf_ncccs = NearestCentroid(metric='l2')
+    clf_ncccs.fit(trainig_set, labels)
     print("Validation")
     validation_files = get_files_and_domain(VALID_DIR, shuffle=True)
     correct_mlp = 0
     correct_svm = 0
     correct_ncc = 0
     correct_dtr = 0
+    correct_sgd = 0
+    correct_ncccs = 0
+    correct_my = 0
     total   = 0
     for i in tqdm.trange(len(validation_files)):
         # if i == num_files:
             # break
         f, domain = validation_files[i]
-        centroid_to_validate = file_to_centroid_vec(f, vocabulary, emb_dictionary,embedding_size, num_file_words)
+        centroid_to_validate = file_to_centroid_vec(f, vocabulary, emb_dictionary, embedding_size, num_file_words)
         prediction_mlp = clf_mlp.predict([centroid_to_validate])
         prediction_svm = clf_svm.predict([centroid_to_validate])
         prediction_ncc = clf_ncc.predict([centroid_to_validate])
         prediction_dtr = clf_dtr.predict([centroid_to_validate])
+        prediction_sgd = clf_sgd.predict([centroid_to_validate])
+        prediction_ncccs = clf_ncccs.predict([centroid_to_validate])
+        my_prediction = prediction_ncc
+        if prediction_sgd == prediction_dtr or prediction_sgd == prediction_mlp or prediction_sgd == prediction_svm:
+            my_prediction = prediction_sgd
         total += 1
         if prediction_mlp == domain:
             correct_mlp += 1
@@ -76,6 +77,12 @@ def main():
             correct_ncc += 1
         if prediction_dtr == domain:
             correct_dtr += 1
+        if prediction_sgd == domain:
+            correct_sgd += 1
+        if prediction_ncccs == domain:
+            correct_ncccs += 1
+        if my_prediction == domain:
+            correct_my += 1
         print('[MLP] - Predicted: {}, Expected: {}'.format(prediction_mlp, domain))
         print('Correct_mlp: {}, Total: {}, Perc: {}%'.format(correct_mlp, total, int(correct_mlp*100/total)))
         print('[SVM] - Predicted: {}, Expected: {}'.format(prediction_svm, domain))
@@ -84,7 +91,28 @@ def main():
         print('Correct_ncc: {}, Total: {}, Perc: {}%'.format(correct_ncc, total, int(correct_ncc*100/total)))
         print('[DTR] - Predicted: {}, Expected: {}'.format(prediction_dtr, domain))
         print('Correct_dtr: {}, Total: {}, Perc: {}%'.format(correct_dtr, total, int(correct_dtr*100/total)))
+        print('[SGD] - Predicted: {}, Expected: {}'.format(prediction_sgd, domain))
+        print('Correct_sgd: {}, Total: {}, Perc: {}%'.format(correct_sgd, total, int(correct_sgd*100/total)))
+        print('[NCCCS] - Predicted: {}, Expected: {}'.format(prediction_ncccs, domain))
+        print('Correct_ncccs: {}, Total: {}, Perc: {}%'.format(correct_ncccs, total, int(correct_ncccs*100/total)))
+        print('[MY] - Predicted: {}, Expected: {}'.format(my_prediction, domain))
+        print('Correct_my: {}, Total: {}, Perc: {}%'.format(correct_my, total, int(correct_my*100/total)))
 
+
+def build_training_dataset(training_files, vocabulary, emb_dictionary, embedding_size, num_file_words, num_file_to_use=-1):
+    trainig_set = []
+    labels = []
+    for i in tqdm.trange(len(training_files)):
+        f, domain = training_files[i]
+        try:
+            centroid = file_to_centroid_vec(f, vocabulary, emb_dictionary, embedding_size, num_file_words)
+        except ZeroDivisionError as e:
+            continue
+        trainig_set.append(centroid)
+        labels.append(domain)
+        if i == num_file_to_use:
+            break
+    return trainig_set, labels
 
 
 def file_to_centroid_vec(file_name, vocabulary, emb_dictionary,embedding_size, num_file_words):
