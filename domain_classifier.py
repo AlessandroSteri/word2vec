@@ -16,8 +16,8 @@ from data_preprocessing import UNK
 
 
 def main():
-    exec_id = '152234754791'
-    embedding_size = 128
+    exec_id = '152269643520'
+    embedding_size = 200
     trainig_set = []
     labels = []
 
@@ -29,14 +29,19 @@ def main():
 
     vocabulary, vectors, dictionary, inv_dictionary, emb_dictionary = recover_execution_environment(exec_id)
 
-    num_files = 10000
+    # num_files = 10000
     for i in tqdm.trange(len(training_files)):
         f, domain = training_files[i]
-        centroid = file_to_centroid_vec(f, vocabulary, emb_dictionary,embedding_size, num_file_words)
+        try:
+            centroid = file_to_centroid_vec(f, vocabulary, emb_dictionary,embedding_size, num_file_words)
+        except ZeroDivisionError as e:
+            continue
         trainig_set.append(centroid)
         labels.append(domain)
-        if num_files == i:
-            break
+        # if i == 1000:
+            # break
+        # if num_files == i:
+            # break
 
     print("Training")
     clf_mlp = training_mlp(trainig_set, labels)
@@ -54,8 +59,8 @@ def main():
     correct_dtr = 0
     total   = 0
     for i in tqdm.trange(len(validation_files)):
-        if i == num_files:
-            break
+        # if i == num_files:
+            # break
         f, domain = validation_files[i]
         centroid_to_validate = file_to_centroid_vec(f, vocabulary, emb_dictionary,embedding_size, num_file_words)
         prediction_mlp = clf_mlp.predict([centroid_to_validate])
