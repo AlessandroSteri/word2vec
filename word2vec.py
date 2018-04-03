@@ -128,9 +128,11 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
     print('Time bult_dataset: ', dur)
 
     cardinality = compute_training_set_cardinality(window_size, data)
+    coverage_data = get_training_set_coverage(batch_size, num_steps, cardinality)
+    training_pairs, epoch, coverage, training_set_cardinality = coverage
     print("Training Set Cardinality: ", cardinality)
-    print("epoch: ", (batch_size*num_steps) / cardinality)
-    print("Coverage: {}%".format((batch_size*num_steps*100) / cardinality))
+    print("Epoch: ", epoch)
+    print("Coverage: {}%".format(coverage)
 
 
 
@@ -244,6 +246,8 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
         curr_context_word = 0
         it_start = time.time()
         lerning_rate_over_time = []
+        local_max_acc = 0
+        local_min_acc = 0
         for step in bar:
             batch_inputs, batch_labels, cs, cw, ccw = generate_batch(batch_size, curr_sentence, curr_word, curr_context_word, window_size, data)
             curr_sentence = cs
@@ -288,7 +292,19 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
                 loss_over_time.append(average_loss/step)
                 initial_acc = eval.accuracy_log[0]
                 curr_acc = eval.accuracy_log[len(eval.accuracy_log) - 1]
-                print("accuracy gain: "+str(curr_acc - initial_acc))
+                if curr_acc > local_max_acc:
+                    local_max_acc = curr_acc
+                    local_min_acc = local_max_acc
+                if curr_acc < local_min_acc:
+                    local_min_acc = curr_acc
+
+                # print("accuracy gain: "+str(curr_acc - initial_acc))
+                print("HP: ", hyperparameters)
+                print("Max_accuracy: ", local_max_acc)
+                print("Min_local_accuracy: ", local_min_acc)
+                print("Training Set Cardinality: ", cardinality)
+                print("Epoch: ", epoch)
+                print("Coverage: {}%".format(coverage)
                 if decay:
                     if step % decay_step == 0:
                         lerning_rate_over_time.append(float(decay_learning_rate.eval()))
@@ -341,7 +357,6 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
     # plot_with_labels(low_dim_embs, labels, os.path.join('./', 'tsne.png'))
     # pdb.set_trace()
 
-    coverage_data = get_training_set_coverage(batch_size, num_steps, cardinality)
 
     return final_relative_accuracy, acc_perc, avg_iteraz_sec, final_avg_loss, data_size, coverage_data
 

@@ -17,7 +17,7 @@ from data_preprocessing import UNK
 
 
 def main():
-    exec_id = '152269643520'
+    exec_id = '152272740476'
     embedding_size = 200
 
     num_file_words = 1000000
@@ -28,20 +28,25 @@ def main():
 
     vocabulary, vectors, dictionary, inv_dictionary, emb_dictionary = recover_execution_environment(exec_id)
 
-    trainig_set, labels = build_training_dataset(training_files, vocabulary, emb_dictionary, embedding_size, num_file_words, num_file_to_use=1000)
+    trainig_set, labels = build_training_dataset(training_files, vocabulary, emb_dictionary, embedding_size, num_file_words)
     # num_files = 10000
 
 
-    print("Training")
+    print("Training..mlp")
     clf_mlp = training_mlp(trainig_set, labels)
+    print("Training..svm")
     clf_svm = svm.SVC()
     clf_svm.fit(trainig_set, labels)
+    print("Training..ncc")
     clf_ncc = NearestCentroid()
     clf_ncc.fit(trainig_set, labels)
+    print("Training..dtr")
     clf_dtr = tree.DecisionTreeClassifier()
     clf_dtr.fit(trainig_set, labels)
+    print("Training..sgd")
     clf_sgd = SGDClassifier(loss="hinge", penalty="l2")
     clf_sgd.fit(trainig_set, labels)
+    print("Training..nccsc")
     clf_ncccs = NearestCentroid(metric='l2')
     clf_ncccs.fit(trainig_set, labels)
     print("Validation")
