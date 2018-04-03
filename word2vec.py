@@ -129,7 +129,7 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
 
     cardinality = compute_training_set_cardinality(window_size, data)
     coverage_data = get_training_set_coverage(batch_size, num_steps, cardinality)
-    training_pairs, epoch, coverage, training_set_cardinality = coverage
+    training_pairs, epoch, coverage, training_set_cardinality = coverage_data
     print("Training Set Cardinality: ", cardinality)
     print("Epoch: ", epoch)
     print("Coverage: {}%".format(coverage))
