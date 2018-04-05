@@ -47,6 +47,7 @@ def main ():
     cmdLineParser.add_argument("learning_rate", type=float, help="base learning rate")
     cmdLineParser.add_argument('step_rate', nargs='*', default=[], help='[decay step, decay rate]')
     cmdLineParser.add_argument("--decay", dest="decay", action='store_true')
+    cmdLineParser.add_argument("--linear_decay", dest="linear_decay", action='store_true')
     cmdLineArgs = cmdLineParser.parse_args()
 
     batch_size       = cmdLineArgs.batch_size
@@ -58,10 +59,11 @@ def main ():
     num_steps        = cmdLineArgs.num_steps
     learning_rate    = cmdLineArgs.learning_rate
     decay = cmdLineArgs.decay
+    linear_decay = cmdLineArgs.linear_decay
     step_rate = cmdLineArgs.step_rate
     print("DECAY: ", decay, step_rate)
 
-    hyperparameters = [batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate, decay, step_rate]
+    hyperparameters = [batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate, decay, linear_decay, step_rate]
 
     # Need for a 'sort-of' unique, ordered id to identify different executions in log.
     execution_id = int(time.time()*100)
@@ -80,9 +82,15 @@ def main ():
     final_relative_accuracy, acc_perc, avg_iteraz_sec, final_avg_loss, data_size, coverage_data = train(*hyperparameters, execution_id)
     stop  = time.time()
 
+    decay_method = 'None'
+    if decay:
+        decay_method = 'Exponential Decay'
+    if linear_decay:
+        decay_method = 'Linear Decay'
+
     # Post-exec log, only executions carried out till completion.
     log('./log/executions/' + 'log' + '.txt', "Execution ID:" + str(execution_id) + ':' + str(hyperparameters) + '\n')
-    log('./log/executions/' + 'log' + '.txt', "Acc: " + str(final_relative_accuracy) + ", Acc%: " + str(acc_perc) + "%, It/s: " + str(avg_iteraz_sec) + ", Loss: " + str(final_avg_loss) + '\n')
+    log('./log/executions/' + 'log' + '.txt', "Acc: " + str(final_relative_accuracy) + ", Acc%: " + str(acc_perc) + "%, It/s: " + str(avg_iteraz_sec) + ", Loss: " + str(final_avg_loss) + ", Decay: " + decay_method + '\n')
 
     # training_pairs, used_training_pairs, coverage, coverage_unk = coverage_data
     training_pairs, epoch, coverage, training_set_cardinality = coverage_data
@@ -93,9 +101,9 @@ def main ():
 ### }}} END MAIN
 
 
-def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate, decay, step_rate, execution_id):
+def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate, decay, linear_decay, step_rate, execution_id):
 
-    hyperparameters = [batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate, decay, step_rate, execution_id]
+    hyperparameters = [batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate, decay, linear_decay, step_rate, execution_id]
     print('Current Execution: ', hyperparameters)
 
     # load the training set
@@ -195,7 +203,7 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
             # TODO: taken from slides
             # was: optimizer = None ###FILL HERE ###
             decay_learning_rate = None
-            if not decay:
+            if not decay and not linear_decay:
                 # constant learning rate
                 optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss)
             else:
@@ -204,7 +212,12 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
                 intitial_learning_rate = learning_rate
                 decay_step = int(step_rate[0])  #100000
                 decay_rate = float(step_rate[1])  #0.96
-                decay_learning_rate = tf.train.exponential_decay(intitial_learning_rate, global_step, decay_step, decay_rate, staircase=True)
+                if decay:
+                    decay_learning_rate = tf.train.exponential_decay(intitial_learning_rate, global_step, decay_step, decay_rate, staircase=True)
+                elif linear_decay:
+                    decay_learning_rate = tf.train.inverse_time_decay(intitial_learning_rate, global_step, decay_step, decay_rate, staircase=True)
+                    # decay_learning_rate = tf.train.noisy_linear_cosine_decay(intitial_learning_rate, global_step, decay_step, decay_rate)
+
                 # decay_learning_rate = tf.train.cosine_decay(intitial_learning_rate, global_step, decay_step, name=None)
 
                 optimizer = tf.train.GradientDescentOptimizer(decay_learning_rate).minimize(loss, global_step=global_step)
@@ -248,6 +261,7 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
         lerning_rate_over_time = []
         local_max_acc = 0
         local_min_acc = 0
+        last_max_update = 0
         for step in bar:
             batch_inputs, batch_labels, cs, cw, ccw = generate_batch(batch_size, curr_sentence, curr_word, curr_context_word, window_size, data)
             curr_sentence = cs
@@ -286,29 +300,37 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
             if step == (num_steps - 1):
                 writer.add_run_metadata(run_metadata, 'step%d' % step)
             if step % STEP_CHECK is 0:
-                print('Current Execution: ', hyperparameters)
+                # print('Current Execution: ', hyperparameters)
                 eval.eval(session)
                 print("avg loss: "+str(average_loss/step))
                 loss_over_time.append(average_loss/step)
                 initial_acc = eval.accuracy_log[0]
                 curr_acc = eval.accuracy_log[len(eval.accuracy_log) - 1]
+
+                # Stats over accuracy, to have an estimation at runtime if it get stuck in a local max.
+                last_max_update += 1
                 if curr_acc > local_max_acc:
                     local_max_acc = curr_acc
                     local_min_acc = local_max_acc
+                    last_max_update = 0
                 if curr_acc < local_min_acc:
                     local_min_acc = curr_acc
 
                 # print("accuracy gain: "+str(curr_acc - initial_acc))
                 print("HP: ", hyperparameters)
                 print("Max_accuracy: ", local_max_acc)
+                print("Latest max update: {} * {} it ago".format(last_max_update, STEP_CHECK))
                 print("Min_local_accuracy: ", local_min_acc)
                 print("Training Set Cardinality: ", cardinality)
                 print("Epoch: ", epoch)
                 print("Coverage: {}%".format(coverage))
-                if decay:
+                if decay or linear_decay:
                     if step % decay_step == 0:
                         lerning_rate_over_time.append(float(decay_learning_rate.eval()))
-                    print("Decay lr: ", decay_learning_rate.eval())
+                    if decay:
+                        print("EXP Decay lr: ", decay_learning_rate.eval())
+                    if linear_decay:
+                        print("LIN Decay lr: ", decay_learning_rate.eval())
 
         it_stop = time.time()
         final_embeddings = normalized_embeddings.eval()
