@@ -258,7 +258,7 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
         curr_word =0
         curr_context_word = 0
         it_start = time.time()
-        lerning_rate_over_time = []
+        learning_rate_over_time = []
         local_max_acc = 0
         local_min_acc = 0
         last_max_update = 0
@@ -326,7 +326,7 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
                 print("Coverage: {}%".format(coverage))
                 if decay or linear_decay:
                     if step % decay_step == 0:
-                        lerning_rate_over_time.append(float(decay_learning_rate.eval()))
+                        learning_rate_over_time.append(float(decay_learning_rate.eval()))
                     if decay:
                         print("EXP Decay lr: ", decay_learning_rate.eval())
                     if linear_decay:
@@ -348,8 +348,8 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
         acc_perc = final_relative_accuracy * 100.0 / num_questions
         log_loss(execution_id, loss_over_time)
         log_accuracy(execution_id, eval.accuracy_log)
-        if decay:
-            log_learning_rate(execution_id, lerning_rate_over_time)
+        if decay or linear_decay:
+            log_learning_rate(execution_id, learning_rate_over_time)
 
         ### SAVE VECTORS ###
         if final_relative_accuracy > 2000:

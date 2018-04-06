@@ -10,6 +10,6 @@
 # python word2vec.py 32 128 1 5 150 80000 2000 1 100000 0.99 --decay # test execution
 
 # python word2vec.py 32 200 2 200 250 80000 200000 1 10000 0.5 --linear_decay #
-python word2vec.py 32 200 2 200 50000 800000000000 6400000 1 1000000 0.5 --linear_decay #
+python word2vec.py 32 200 2 200 50000 800000000000 12000000 1 4000000 0.5 --linear_decay #
 #lr should end up to be around 0.07, if double iterations then final lr 0.005  maybe ry linear decay
 
