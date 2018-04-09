@@ -10,6 +10,8 @@ import re
 from time import time
 import ipdb
 
+# import pickle
+
 UNK = "<UNK>"
 UNK_INDEX = 0
 STOPWORDS_FILE = './stopwords2.txt'
@@ -182,91 +184,38 @@ def build_dataset(sentences, vocab_size, execution_id):
     data = None
 
     ###FILL HERE###
+    start = time()
     vocab = data_to_vocab(sentences)
-    # ##
-    # stopwords_file = './stopwords2.txt'
-    # # stopwords_file = './stopwords_full.txt'
-    # #TODO: taken from course slides:
-    # stopwords = get_stopwords(stopwords_file)
-    #
-    # vocab = collections.Counter()
-    #
-    # # tokenizer = nltk.tokenizer.casual.casual
-    # for sentence in sentences:
-    #     for w in sentence:
-    #         if w == '': # or w in stopwords:
-    #             continue
-    #         if '\\' in w:
-    #             # remove wiki markdown
-    #             # print('[build_dataset] Word with \ : {}'.format(w))
-    #             continue
-    #         if any(c.isdigit() for c in w):
-    #             # print('[build_dataset] Word with digit: {}'.format(w))
-    #             continue
-    #         if len(w) <= 2:
-    #             # remove most of stop words, remove also up which is ineresting
-    #             # print('[build_dataset] Word with less than 2: {}'.format(w))
-    #             continue
-    #         if w == '' or w in stopwords:
-    #             continue
-    #
-    #         char_to_take_of = set(string.punctuation)
-    #         # allow word like new york
-    #         # TODO: remove -.
-    #         # char_to_take_of.pop('-')
-    #         # allow u.s.a.
-    #         # char_to_take_of.pop('.')
-    #         w_no_char = "".join(char for char in w if char not in char_to_take_of)
-    #         if '..' not in w_no_char:
-    #             w_no_char =  w_no_char.rstrip('-.').lstrip('-.')
-    #         else:
-    #             # preserving acronyms
-    #             w_no_char =  w_no_char.rstrip('-').lstrip('-')
-    #             w_no_char = w_no_char.replace('..', '.')
-    #
-    #
-    #         if len(w_no_char) <= 2 or w_no_char in stopwords:
-    #             # remove most of stop words, remove also up which is ineresting
-    #             # print('[build_dataset] Word with less than 2: {}'.format(w))
-    #             continue
-    #         vocab[w_no_char] += 1
-    # # print("Distinct words: ", len(vocab))
-    # ###
-
+    print("Data to vocab: {}".format(time() - start))
     #TODO: taken from course slides^
 
     # save vocab to csv file
+    start = time()
     vocab_t_csv(vocab, vocab_size, execution_id)
-# ###
-#     # TODO: taken from stackoverflow
-#     file_name = os.path.join('./log/vocab', str(execution_id) + '.csv')
-#     with open(file_name,'w') as csvfile:
-#         # fieldnames=['word','occur']
-#         writer=csv.writer(csvfile)
-#         # writer.writerow(fieldnames)
-#         for key, value in enumerate(vocab.most_common(vocab_size-1)):
-#             writer.writerow([value[0], value[1]])
-# ###
+    print("Vocab to csv: {}".format(time() - start))
+
     # Build dictionary
-    for index, word_occurrency in enumerate(vocab.most_common(vocab_size-1)):
-        # vocab_size -1 to leave one spot for UNK
+    start = time()
+    for index, word_ in enumerate(vocab.most_common(vocab_size-1)): # vocab_size -1 to leave one spot for UNK
+        word, _ = word_
+        # print("Index: {}, word: {}".format(index, word))
 
-        common_word, _ = word_occurrency
-        # print("Index: {}, word: {}".format(index, common_word))
-
-        dictionary[common_word] = index + 1
-        reversed_dictionary[index + 1] = common_word
+        dictionary[word] = index + 1
+        reversed_dictionary[index + 1] = word
 
     # Handling less frequent words as UNK
-    dictionary[UNK] = UNK_INDEX #vocab_size-1
+    dictionary[UNK] = UNK_INDEX
     reversed_dictionary[UNK_INDEX] = UNK
-
+    print("Build dictionary: {}".format(time() - start))
 
     data = []
+    start = time()
     for sentence in sentences:
         # sentence_2_int = sentence # text in clear for debugging
         sentence_2_int = apply_dictionary(sentence, dictionary, UNK)
         data.append(sentence_2_int)
+
+    print("Sentences: {}".format(time() - start))
 
     return data, dictionary, reversed_dictionary
 
@@ -389,12 +338,9 @@ def data_to_vocab(sentences):
     ###
 
 def vocab_t_csv(vocab, vocab_size, execution_id):
-    # TODO: taken from stackoverflow
     file_name = os.path.join('./log/vocab', str(execution_id) + '.csv')
-    with open(file_name,'w') as csvfile:
-        # fieldnames=['word','occur']
-        writer=csv.writer(csvfile)
-        # writer.writerow(fieldnames)
+    with open(file_name,'w') as f:
+        writer=csv.writer(f)
         for key, value in enumerate(vocab.most_common(vocab_size-1)):
             writer.writerow([value[0], value[1]])
 

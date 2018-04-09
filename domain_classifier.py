@@ -15,6 +15,8 @@ from data_preprocessing import data_to_vocab
 from data_preprocessing import apply_dictionary
 from data_preprocessing import UNK
 
+# from word2vec import data_from_file
+from word2vec import get_files_and_domain
 
 def main():
     exec_id = '152272740476'
@@ -144,7 +146,7 @@ def data_from_file(file_name, num_file_words=-1):
             split = line.lower().strip().split()
             if limit > 0 and limit - len(split) < 0:
                 split = split[:limit]
-            else:
+            elif limit != -1:
                 limit -= len(split)
             if limit >= 0 or limit == -1:
                 sentences.append(split)
@@ -197,40 +199,40 @@ def peculiar_doc_words(doc_vocab, vocabulary):
     # print(pecurliarities)
     return pecurliar_words, pecurliarities
 
-def get_files_and_domain(directory, shuffle=False):
-    files = []
-    # data = []
-    for domain in os.listdir(directory):
-    #for dirpath, dnames, fnames in os.walk(directory):
-        # limit = domain_words
-        # Compatibility with macOS
-        if domain == ".DS_Store":
-            continue
-        for f in os.listdir(os.path.join(directory, domain)):
-            file_path = os.path.join(directory, domain, f)
-            if f.endswith(".txt"):
-                files.append((file_path, domain))
-            # print(file_path)
-            # if f.endswith(".txt"):
-            #     with open(os.path.join(directory, domain, f)) as file:
-            #         # sentences = []
-            #         for line in file.readlines():
-            #             split = line.lower().strip().split()
-            #             if limit > 0 and limit - len(split) < 0:
-            #                 split = split[:limit]
-            #             else:
-            #                 limit -= len(split)
-            #             if limit >= 0 or limit == -1:
-            #                 data.append(split)
-
-    files = np.asarray(files, dtype=str)
-    # print(len(files))
-    if shuffle:
-        start = time.time()
-        np.random.shuffle(files)
-        stop = time.time()
-        # print('Shuffle: ', stop-start)
-    return files
+# def get_files_and_domain(directory, shuffle=False):
+#     files = []
+#     # data = []
+#     for domain in os.listdir(directory):
+#     #for dirpath, dnames, fnames in os.walk(directory):
+#         # limit = domain_words
+#         # Compatibility with macOS
+#         if domain == ".DS_Store":
+#             continue
+#         for f in os.listdir(os.path.join(directory, domain)):
+#             file_path = os.path.join(directory, domain, f)
+#             if f.endswith(".txt"):
+#                 files.append((file_path, domain))
+#             # print(file_path)
+#             # if f.endswith(".txt"):
+#             #     with open(os.path.join(directory, domain, f)) as file:
+#             #         # sentences = []
+#             #         for line in file.readlines():
+#             #             split = line.lower().strip().split()
+#             #             if limit > 0 and limit - len(split) < 0:
+#             #                 split = split[:limit]
+#             #             else:
+#             #                 limit -= len(split)
+#             #             if limit >= 0 or limit == -1:
+#             #                 data.append(split)
+#
+#     files = np.asarray(files, dtype=str)
+#     # print(len(files))
+#     if shuffle:
+#         start = time.time()
+#         np.random.shuffle(files)
+#         stop = time.time()
+#         # print('Shuffle: ', stop-start)
+#     return files
 
 
 def recover_execution_environment(exec_id):

@@ -48,6 +48,7 @@ def main ():
     cmdLineParser.add_argument('step_rate', nargs='*', default=[], help='[decay step, decay rate]')
     cmdLineParser.add_argument("--decay", dest="decay", action='store_true')
     cmdLineParser.add_argument("--linear_decay", dest="linear_decay", action='store_true')
+    cmdLineParser.add_argument("--shuffle_data", dest="shuffle_data", action='store_true')
     cmdLineArgs = cmdLineParser.parse_args()
 
     batch_size       = cmdLineArgs.batch_size
@@ -61,9 +62,10 @@ def main ():
     decay = cmdLineArgs.decay
     linear_decay = cmdLineArgs.linear_decay
     step_rate = cmdLineArgs.step_rate
+    shuffle_data = cmdLineArgs.shuffle_data
     print("DECAY: ", decay, step_rate)
 
-    hyperparameters = [batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate, decay, linear_decay, step_rate]
+    hyperparameters = [batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate, decay, linear_decay, step_rate, shuffle_data]
 
     # Need for a 'sort-of' unique, ordered id to identify different executions in log.
     execution_id = int(time.time()*100)
@@ -101,14 +103,18 @@ def main ():
 ### }}} END MAIN
 
 
-def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate, decay, linear_decay, step_rate, execution_id):
+def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate, decay, linear_decay, step_rate, shuffle_data, execution_id):
 
-    hyperparameters = [batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate, decay, linear_decay, step_rate, execution_id]
+    hyperparameters = [batch_size, embedding_size, window_size, neg_samples, vocabulary_size, num_domain_words, num_steps, learning_rate, decay, linear_decay, step_rate, shuffle_data, execution_id]
     print('Current Execution: ', hyperparameters)
 
     # load the training set
     start    = time.time()
-    raw_data = read_data(TRAIN_DIR, domain_words=num_domain_words)
+    raw_data = None
+    if shuffle_data:
+        raw_data = read_shuffled_data(TRAIN_DIR, num_dataset_words=num_domain_words)
+    else:
+        raw_data = read_data(TRAIN_DIR, domain_words=num_domain_words)
     stop     = time.time()
     dur      = stop - start
     print('Raw Data size: ', len(raw_data), 'Time raw_data: ', dur)
@@ -255,7 +261,6 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
 
         average_loss = 0
         loss_over_time = []
-        bar = tqdm.trange(num_steps)
         curr_sentence = 0
         curr_word =0
         curr_context_word = 0
@@ -264,6 +269,7 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
         local_max_acc = 0
         local_min_acc = 0
         last_max_update = 0
+        bar = tqdm.trange(num_steps)
         for step in bar:
             batch_inputs, batch_labels, cs, cw, ccw = generate_batch(batch_size, curr_sentence, curr_word, curr_context_word, window_size, data)
             curr_sentence = cs
@@ -307,7 +313,7 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
                 print("avg loss: "+str(average_loss/step))
                 loss_over_time.append(average_loss/step)
                 initial_acc = eval.accuracy_log[0]
-                curr_acc = eval.accuracy_log[len(eval.accuracy_log) - 1]
+                curr_acc = eval.accuracy_log[-1]
 
                 # Stats over accuracy, to have an estimation at runtime if it get stuck in a local max.
                 last_max_update += 1
@@ -340,7 +346,7 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
         # my function but is commented cause works only using gui on mbp
         eval.plot()
 
-        final_relative_accuracy = eval.accuracy_log[len(eval.accuracy_log) - 1]
+        final_relative_accuracy = eval.accuracy_log[-1]
         num_questions = eval.questions.shape[0]
         # final_absolute_accuracy = final_relative_accuracy / (eval.questions.shape[0])
 
@@ -403,13 +409,65 @@ def read_data(directory, domain_words=-1):
                         split = line.lower().strip().split()
                         if limit > 0 and limit - len(split) < 0:
                             split = split[:limit]
-                        else:
+                        elif limit != -1:
                             limit -= len(split)
                         if limit >= 0 or limit == -1:
                             data.append(split)
                     # data.append(sentences)
     return data
 
+
+def read_shuffled_data(directory, num_dataset_words=-1):
+    files = get_files_and_domain(directory, shuffle=True)
+    data = []
+    limit = num_dataset_words
+    for file_index in tqdm.trange(len(files)):
+        f, _ = files[file_index]
+        with open(f) as file:
+            # sentences = []
+            for line in file.readlines():
+                split = line.lower().strip().split()
+                if limit > 0 and limit - len(split) < 0:
+                    split = split[:limit]
+                elif limit != -1:
+                    limit -= len(split)
+                if limit >= 0 or limit == -1:
+                    data.append(split)
+    return data
+
+def get_files_and_domain(directory, shuffle=False):
+    files = []
+    for domain in os.listdir(directory):
+        # Compatibility with macOS
+        if domain == ".DS_Store":
+            continue
+        for f in os.listdir(os.path.join(directory, domain)):
+            file_path = os.path.join(directory, domain, f)
+            if f.endswith(".txt"):
+                files.append((file_path, domain))
+
+    files = np.asarray(files, dtype=str)
+    if shuffle:
+        # start = time.time()
+        np.random.shuffle(files)
+        # stop = time.time()
+        # print('Shuffle: ', stop-start)
+    return files
+
+# def data_from_file(file_name, num_file_words=-1):
+#     limit = num_file_words
+#     sentences = []
+#     with open(file_name, 'r') as f:
+#         for line in f.readlines():
+#             split = line.lower().strip().split()
+#             if limit > 0 and limit - len(split) < 0:
+#                 split = split[:limit]
+#             elif limit != -1:
+#                 limit -= len(split)
+#             if limit >= 0 or limit == -1:
+#                 sentences.append(split)
+#             # print(sentences)
+#     return sentences
 
 # Function to draw visualization of distance between embeddings.
 def plot_with_labels(low_dim_embs, labels, filename):
