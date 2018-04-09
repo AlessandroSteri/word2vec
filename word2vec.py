@@ -26,7 +26,7 @@ TRAIN_DIR      = "dataset/DATA/TRAIN"
 VALID_DIR      = "dataset/DATA/DEV"
 TMP_DIR        = "/tmp/"
 ANALOGIES_FILE = "dataset/eval/questions-words.txt"
-STEP_CHECK     = 10000 # Every how many step to check and to log accuracy/loss.
+STEP_CHECK     = 100000 # Every how many step to check and to log accuracy/loss.
 # LOG_FILE       = "./log/log_to_plot.txt"
 log_dirs       = ['log', 'log/executions', 'log/accuracy', 'log/loss', 'log/dict', 'log/inv_dict', 'log/vectors', 'log/vocab', 'log/caching', 'log/lr']
 
@@ -156,6 +156,7 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
     questions = read_analogies(ANALOGIES_FILE, dictionary)
 
     ### MODEL DEFINITION ###
+    # with tf.device('/device:GPU:0'): # uncomment and indent all
     graph = tf.Graph()
     eval  = None
     with graph.as_default():
@@ -205,7 +206,8 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
             decay_learning_rate = None
             if not decay and not linear_decay:
                 # constant learning rate
-                optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss)
+                    optimizer = tf.train.AdagradOptimizer(learning_rate).minimize(loss)
+                # optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss)
             else:
                 # decay
                 global_step = tf.Variable(0, trainable=False)
