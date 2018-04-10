@@ -32,7 +32,6 @@ ago
 ah
 ahead
 ain't
-all
 allow
 allows
 almost
@@ -284,8 +283,6 @@ furthermore
 furthers
 g
 gave
-general
-generally
 get
 gets
 getting
@@ -484,8 +481,6 @@ miss
 ml
 more
 moreover
-most
-mostly
 move
 moved
 mr
@@ -591,7 +586,6 @@ own
 p
 page
 pages
-part
 parted
 particular
 particularly

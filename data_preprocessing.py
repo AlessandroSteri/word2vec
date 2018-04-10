@@ -9,6 +9,7 @@ import string
 import re
 from time import time
 import ipdb
+import pickle
 
 # import pickle
 
@@ -191,7 +192,7 @@ def build_dataset(sentences, vocab_size, execution_id):
 
     # save vocab to csv file
     start = time()
-    vocab_t_csv(vocab, vocab_size, execution_id)
+    vocab_to_csv(vocab, vocab_size, execution_id)
     print("Vocab to csv: {}".format(time() - start))
 
     # Build dictionary
@@ -217,7 +218,7 @@ def build_dataset(sentences, vocab_size, execution_id):
 
     print("Sentences: {}".format(time() - start))
 
-    return data, dictionary, reversed_dictionary
+    return data, dictionary, reversed_dictionary, vocab
 
 ###
 # Save embedding vectors in a suitable representation for the domain identification task
@@ -225,15 +226,15 @@ def build_dataset(sentences, vocab_size, execution_id):
 def save_vectors(vectors, execution_id):
 
     ###FILL HERE###
-    # start = time()
-    # file_name = 'out/' + str(datetime.datetime.now().date()) + '_' + str(datetime.datetime.now().time()).replace(':', '.') + '_vectors.csv'
+    start = time()
     file_name = os.path.join('./log/vectors', str(execution_id) + '.csv')
-    # file_name = 'vector.csv'
-    # file_name = time.strftime('%Y%m%d-%H%M%S') + ' - embedding' + '.csv'
-    # print(vectors)
     np.savetxt(file_name, vectors, delimiter=',')
-    # stop = time()
-    # print("Save vector costs: {} sec.".format(stop - start))
+    stop = time()
+    start_p = time()
+    with open(os.path.join('./log/vectors', str(execution_id) + '.pickle'), 'wb') as vector_file:
+        pickle.dump(vectors, vector_file, protocol=pickle.HIGHEST_PROTOCOL)
+    stop_p = time()
+    print("Save vector time, csv: {} sec vs pickle: {} sec.".format(stop - start, stop_p - start_p))
 
 # Reads through the analogy question file.
 #    Returns:
@@ -337,7 +338,7 @@ def data_to_vocab(sentences):
     return vocab
     ###
 
-def vocab_t_csv(vocab, vocab_size, execution_id):
+def vocab_to_csv(vocab, vocab_size, execution_id):
     file_name = os.path.join('./log/vocab', str(execution_id) + '.csv')
     with open(file_name,'w') as f:
         writer=csv.writer(f)

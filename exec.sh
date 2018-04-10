@@ -11,6 +11,6 @@
 
 # python word2vec.py 32 200 2 200 250 80000 200000 1 10000 0.5 --linear_decay #
 # python word2vec.py 32 200 2 200 50000 800000000000 12000000 1 4000000 0.5 --linear_decay #
-python word2vec.py 256 128 10 20 50000 -1 24000000 1 --shuffle_data #
+python word2vec.py 256 128 10 20 70000 -1 24000000 1 --shuffle_data #
 #lr should end up to be around 0.07, if double iterations then final lr 0.005  maybe ry linear decay
 
