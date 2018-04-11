@@ -14,115 +14,165 @@ from word2vec import VALID_DIR
 from data_preprocessing import data_to_vocab
 from data_preprocessing import apply_dictionary
 from data_preprocessing import UNK
+from utils import LogTime
 
 # from word2vec import data_from_file
 from word2vec import get_files_and_domain
 
+import pickle
+
+log_input_dir = "./"
+# log_input_dir = "./acc6269"
+# log_output_dir = "./"
+
+domain_caching = './log/domain'
+
 def main():
-    exec_id = '152272740476'
-    embedding_size = 200
+    # exec_id = '152317774459'
+    exec_id = '152331714290'
+    embedding_size = 128
+
+    # directory = os.path.join(domain_caching, exec_id)
+    # caching_directory = os.path.join(domain_caching, 'file_domain', exec_id)
+    caching_directory = os.path.join(domain_caching, exec_id)
+    # caching_directory = os.path.join(domain_caching, 'file_domain_new')
 
     num_file_words = 1000000
     num_pec_words = 1000000
+    # num_file_to_use = 10 #TODO elimina
 
-    # list of all the files in the training set
-    training_files = get_files_and_domain(TRAIN_DIR, shuffle=True)
+    # List of all the files in the training set along with their domains
+    with LogTime('Get file paths'):
+        training_files = get_files_and_domain(TRAIN_DIR, shuffle=True)
 
-    vocabulary, vectors, dictionary, inv_dictionary, emb_dictionary = recover_execution_environment(exec_id)
+    with LogTime('Restoring env'):
+        vocabulary, vectors, dictionary, inv_dictionary, emb_dictionary = recover_execution_environment(exec_id)
 
-    trainig_set, labels = build_training_dataset(training_files, vocabulary, emb_dictionary, embedding_size, num_file_words)
-    # num_files = 10000
+    # training_set, labels = build_training_dataset(directory, training_files[:num_file_to_use], vocabulary, emb_dictionary, embedding_size, num_file_words)
+    docs_training_set, labels = fetch_docs_with_labels(training_files, caching_directory, caching=True)
+    assert len(docs_training_set) == len(labels), "INVALID CALL"
 
-
-    print("Training..mlp")
-    clf_mlp = training_mlp(trainig_set, labels)
-    print("Training..svm")
-    clf_svm = svm.SVC()
-    clf_svm.fit(trainig_set, labels)
-    print("Training..ncc")
-    clf_ncc = NearestCentroid()
-    clf_ncc.fit(trainig_set, labels)
-    print("Training..dtr")
-    clf_dtr = tree.DecisionTreeClassifier()
-    clf_dtr.fit(trainig_set, labels)
-    print("Training..sgd")
-    clf_sgd = SGDClassifier(loss="hinge", penalty="l2")
-    clf_sgd.fit(trainig_set, labels)
-    print("Training..nccsc")
-    clf_ncccs = NearestCentroid(metric='l2')
-    clf_ncccs.fit(trainig_set, labels)
-    print("Validation")
-    validation_files = get_files_and_domain(VALID_DIR, shuffle=True)
-    correct_mlp = 0
-    correct_svm = 0
-    correct_ncc = 0
-    correct_dtr = 0
-    correct_sgd = 0
-    correct_ncccs = 0
-    correct_my = 0
-    total   = 0
-    for i in tqdm.trange(len(validation_files)):
-        # if i == num_files:
-            # break
-        f, domain = validation_files[i]
-        centroid_to_validate = file_to_centroid_vec(f, vocabulary, emb_dictionary, embedding_size, num_file_words)
-        prediction_mlp = clf_mlp.predict([centroid_to_validate])
-        prediction_svm = clf_svm.predict([centroid_to_validate])
-        prediction_ncc = clf_ncc.predict([centroid_to_validate])
-        prediction_dtr = clf_dtr.predict([centroid_to_validate])
-        prediction_sgd = clf_sgd.predict([centroid_to_validate])
-        prediction_ncccs = clf_ncccs.predict([centroid_to_validate])
-        my_prediction = prediction_ncc
-        if prediction_sgd == prediction_dtr or prediction_sgd == prediction_mlp or prediction_sgd == prediction_svm:
-            my_prediction = prediction_sgd
-        total += 1
-        if prediction_mlp == domain:
-            correct_mlp += 1
-        if prediction_svm == domain:
-            correct_svm += 1
-        if prediction_ncc == domain:
-            correct_ncc += 1
-        if prediction_dtr == domain:
-            correct_dtr += 1
-        if prediction_sgd == domain:
-            correct_sgd += 1
-        if prediction_ncccs == domain:
-            correct_ncccs += 1
-        if my_prediction == domain:
-            correct_my += 1
-        print('[MLP] - Predicted: {}, Expected: {}'.format(prediction_mlp, domain))
-        print('Correct_mlp: {}, Total: {}, Perc: {}%'.format(correct_mlp, total, int(correct_mlp*100/total)))
-        print('[SVM] - Predicted: {}, Expected: {}'.format(prediction_svm, domain))
-        print('Correct_svm: {}, Total: {}, Perc: {}%'.format(correct_svm, total, int(correct_svm*100/total)))
-        print('[NCC] - Predicted: {}, Expected: {}'.format(prediction_ncc, domain))
-        print('Correct_ncc: {}, Total: {}, Perc: {}%'.format(correct_ncc, total, int(correct_ncc*100/total)))
-        print('[DTR] - Predicted: {}, Expected: {}'.format(prediction_dtr, domain))
-        print('Correct_dtr: {}, Total: {}, Perc: {}%'.format(correct_dtr, total, int(correct_dtr*100/total)))
-        print('[SGD] - Predicted: {}, Expected: {}'.format(prediction_sgd, domain))
-        print('Correct_sgd: {}, Total: {}, Perc: {}%'.format(correct_sgd, total, int(correct_sgd*100/total)))
-        print('[NCCCS] - Predicted: {}, Expected: {}'.format(prediction_ncccs, domain))
-        print('Correct_ncccs: {}, Total: {}, Perc: {}%'.format(correct_ncccs, total, int(correct_ncccs*100/total)))
-        print('[MY] - Predicted: {}, Expected: {}'.format(my_prediction, domain))
-        print('Correct_my: {}, Total: {}, Perc: {}%'.format(correct_my, total, int(correct_my*100/total)))
+    args = [docs_training_set, labels, vocabulary, emb_dictionary, embedding_size]
+    training_set, labels = docs2vec(docs2vec_words_peculiarity_weighted_centroid, *args)
 
 
-def build_training_dataset(training_files, vocabulary, emb_dictionary, embedding_size, num_file_words, num_file_to_use=-1):
-    trainig_set = []
-    labels = []
-    for i in tqdm.trange(len(training_files)):
-        f, domain = training_files[i]
-        try:
-            centroid = file_to_centroid_vec(f, vocabulary, emb_dictionary, embedding_size, num_file_words)
-        except ZeroDivisionError as e:
-            continue
-        trainig_set.append(centroid)
-        labels.append(domain)
-        if i == num_file_to_use:
-            break
-    return trainig_set, labels
+    classifiers = train(training_set, labels)
+    validate(classifiers, vocabulary, emb_dictionary, embedding_size, num_file_words)
 
 
-def file_to_centroid_vec(file_name, vocabulary, emb_dictionary,embedding_size, num_file_words):
+def train(training_set, labels):
+    print("[Training]")
+    classifiers = {
+        'MLP': MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(5, 2), random_state=1),
+        # 'SVM': svm.SVC(),
+        'NCC': NearestCentroid(),
+        'DTR': tree.DecisionTreeClassifier(),
+        'SGD': SGDClassifier(loss="hinge", penalty="l2"),
+        }
+    for name, classifier in classifiers.items():
+        with LogTime("Training {}".format(name)):
+            print("Training: {}".format(name))
+            classifier.fit(training_set, labels)
+    return classifiers
+
+
+def validate(classifiers, vocabulary, emb_dictionary, embedding_size, num_file_words):
+    print("[Validation]")
+    correct_predictions = {name: 0 for name, classifier in classifiers.items()}
+    start = time.time()
+    validation_files = None
+    # total   = 0
+    with LogTime("Get Validation Files ans Domains"):
+        validation_files = get_files_and_domain(VALID_DIR, shuffle=True)
+    with LogTime("Validation Phase"):
+        for i in tqdm.trange(len(validation_files)):
+            f, domain = validation_files[i]
+
+            #TODO classifier.score(trainingset, labels)
+            centroid_to_validate = file_to_centroid_vec(f, vocabulary, emb_dictionary, embedding_size, num_file_words)
+
+            for name, classifier in classifiers.items():
+                prediction = classifier.predict([centroid_to_validate])
+                if prediction == domain:
+                    correct_predictions[name] = correct_predictions[name] + 1
+                if i % 500 == 0:
+                    print('[{}] - Predicted: {}, Expected: {}'.format(name, prediction, domain))
+                    print('Correct {}: {}, Total: {}, Perc: {}%'.format(name, correct_predictions[name], i+1, int(correct_predictions[name]*100/(i+1))))
+
+
+def fetch_docs_with_labels(training_files, caching_directory, caching=True):
+    docs_training_set = None
+    labels = None
+    if caching and os.path.exists(caching_directory):
+        print('Loading word_test_set and labels from previous same execution.')
+        with LogTime('Loading docs_training_set and labels'):
+            with open(os.path.join(caching_directory, "word_training_set" + ".pickle"), 'rb') as f:
+                docs_training_set = pickle.load(f)
+            with open(os.path.join(caching_directory, "labels" + ".pickle"), 'rb') as f:
+                labels = pickle.load(f)
+    else:
+        docs_training_set = []
+        labels = []
+        for i in tqdm.trange(len(training_files)):
+            f, domain = training_files[i]
+            file_sentences = data_from_file(f) #, num_file_words)
+            docs_training_set.append(file_sentences)
+            labels.append(domain)
+
+        if not os.path.exists(caching_directory):
+            os.makedirs(caching_directory)
+            with LogTime('Caching docs_training_set and labels'):
+                with open(os.path.join(caching_directory, "word_training_set" + ".pickle"), 'wb') as f:
+                    pickle.dump(docs_training_set, f, protocol=pickle.HIGHEST_PROTOCOL)
+                with open(os.path.join(caching_directory, "labels" + ".pickle"), 'wb') as f:
+                    pickle.dump(labels, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+    return docs_training_set, labels
+
+def docs2vec(to_vector, *args):
+    print(type(args[0]), type(args[1]))
+    print(len(args))
+    print(len(args[0]))
+    print(len(args[1]))
+    training_set, labels = to_vector(*args)
+    #TODO call centroid e riaggioustalo che prende doc e rivedi main
+    return training_set, labels
+
+
+
+def build_training_dataset(directory, training_files, vocabulary, emb_dictionary, embedding_size, num_file_words, num_file_to_use=-1):
+    training_set = None
+    labels = None
+    if os.path.exists(directory):
+        print('Loading test_set and labels from previous same execution.')
+        with open(os.path.join(directory, "training_set" + ".pickle"), 'rb') as f:
+            training_set = pickle.load(f)
+        with open(os.path.join(directory, "labels" + ".pickle"), 'rb') as f:
+            labels = pickle.load(f)
+    elif not os.path.exists(directory): # just in case i add a flag to enable not to cache upon request
+        # compute and catch
+        training_set = []
+        labels = []
+        for i in tqdm.trange(len(training_files)):
+            f, domain = training_files[i]
+            try:
+                centroid = file_to_centroid_vec(f, vocabulary, emb_dictionary, embedding_size, num_file_words)
+            except ZeroDivisionError as e:
+                continue
+            training_set.append(centroid)
+            labels.append(domain)
+            if i == num_file_to_use:
+                break
+        os.makedirs(directory)
+        with open(os.path.join(directory, "training_set" + ".pickle"), 'wb') as f:
+            pickle.dump(training_set, f, protocol=pickle.HIGHEST_PROTOCOL)
+        with open(os.path.join(directory, "labels" + ".pickle"), 'wb') as f:
+            pickle.dump(labels, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+    return training_set, labels
+
+
+def file_to_centroid_vec(file_name, vocabulary, emb_dictionary, embedding_size, num_file_words):
     file_sentences = data_from_file(file_name, num_file_words)
     doc_vocab = data_to_vocab(file_sentences)
     # file_vector = most_peculiar_doc_words(num_pec_words, doc_vocab, vocabulary)
@@ -137,6 +187,32 @@ def file_to_centroid_vec(file_name, vocabulary, emb_dictionary,embedding_size, n
     centroid = mean_vector(embedded_words, pecurliarities, embedding_size)
     return centroid
 
+###
+def docs2vec_words_peculiarity_weighted_centroid(docs_training_set, labels, vocabulary, emb_dictionary, embedding_size):
+    # print(len(docs_training_set), len(labels))
+    assert len(docs_training_set) == len(labels), "INVALID INPUT"
+    training_set = []
+    new_labels = [] # some docs may be discarded when computing centroid so the label
+    for i in tqdm.trange(len(docs_training_set)):
+        doc_sentences = docs_training_set[i]
+        label = labels[i]
+        doc_vocab = data_to_vocab(doc_sentences)
+        # file_vector = most_peculiar_doc_words(num_pec_words, doc_vocab, vocabulary)
+        words, pecurliarities = peculiar_doc_words(doc_vocab, vocabulary)
+        embedded_words = dict()
+        try:
+            embedded_words = [emb_dictionary[word] for word in words]
+        except KeyError as e:
+            print("not in emb_dict - should never be printed")
+        try:
+            centroid = mean_vector(embedded_words, pecurliarities, embedding_size)
+            training_set.append(centroid)
+            new_labels.append(label)
+        except ZeroDivisionError as e:
+            continue
+        # print(len(training_set), len(new_labels))
+        assert len(training_set) == len(new_labels), "INVALID OUTPUT"
+    return training_set, new_labels
 
 def data_from_file(file_name, num_file_words=-1):
     limit = num_file_words
@@ -168,10 +244,12 @@ def most_peculiar_doc_words(num_pec_words, doc_vocab, vocabulary):
         freq_in_doc = occur / tot_occ_doc
         freq_in_dataset = vocabulary[word] / tot_occ_dataset
         freq_ratio = freq_in_doc / freq_in_dataset
-        precision = 10**6
+        #TODO was 6, tune to the best working
+        precision = 10**9
         peculiarity = int(freq_ratio * precision)
         peculiar_word[word] = peculiarity
         # print(word, peculiarity)
+    #TODO check again whats happen with unk not beingin most common
     pecurliar_word_keys = [word for word, occ in peculiar_word.most_common(num_pec_words)]
     return pecurliar_word_keys
 
@@ -198,41 +276,6 @@ def peculiar_doc_words(doc_vocab, vocabulary):
     # print(peculiar_word)
     # print(pecurliarities)
     return pecurliar_words, pecurliarities
-
-# def get_files_and_domain(directory, shuffle=False):
-#     files = []
-#     # data = []
-#     for domain in os.listdir(directory):
-#     #for dirpath, dnames, fnames in os.walk(directory):
-#         # limit = domain_words
-#         # Compatibility with macOS
-#         if domain == ".DS_Store":
-#             continue
-#         for f in os.listdir(os.path.join(directory, domain)):
-#             file_path = os.path.join(directory, domain, f)
-#             if f.endswith(".txt"):
-#                 files.append((file_path, domain))
-#             # print(file_path)
-#             # if f.endswith(".txt"):
-#             #     with open(os.path.join(directory, domain, f)) as file:
-#             #         # sentences = []
-#             #         for line in file.readlines():
-#             #             split = line.lower().strip().split()
-#             #             if limit > 0 and limit - len(split) < 0:
-#             #                 split = split[:limit]
-#             #             else:
-#             #                 limit -= len(split)
-#             #             if limit >= 0 or limit == -1:
-#             #                 data.append(split)
-#
-#     files = np.asarray(files, dtype=str)
-#     # print(len(files))
-#     if shuffle:
-#         start = time.time()
-#         np.random.shuffle(files)
-#         stop = time.time()
-#         # print('Shuffle: ', stop-start)
-#     return files
 
 
 def recover_execution_environment(exec_id):
@@ -291,13 +334,9 @@ def mean_vector(vectors, weights, embedding_size):
     return centroid
 
 def path_of(entity, exec_id, ext='.csv'):
-    path = os.path.join('./log/', entity, exec_id + ext)
+    path = os.path.join(log_input_dir, 'log/', entity, exec_id + ext)
     return path
 
-def training_mlp(trainig_set, labels):
-    clf = MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(5, 2), random_state=1)
-    clf.fit(trainig_set, labels)
-    return clf
 
 if __name__ == '__main__':
     main()
