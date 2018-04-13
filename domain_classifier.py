@@ -73,7 +73,8 @@ def main(execution_id):
         # num_docs, domain_doc_number = get_domain_doc_stats()
     # training set (docs = sentences of words) and labels
     #TODO togli 500
-    docs_training_set, labels = fetch_docs_with_labels(training_files[:500], caching_directory, caching=False)
+    docs_training_set, labels = fetch_docs_with_labels(training_files, caching_directory, caching=False)
+    # docs_training_set, labels = fetch_docs_with_labels(training_files[:500], caching_directory, caching=False)
 
     # compute vocabulary of each domain
     ds_vocabs = domains_vocabularies(docs_training_set, labels, vocabulary, caching_directory)
@@ -106,7 +107,6 @@ def train(training_set, labels):
         #TODO try 100 tree
         'RNDF':RandomForestClassifier(n_estimators=10, n_jobs =-1),
         'RNDF50':RandomForestClassifier(n_estimators=50, n_jobs =-1),
-        # 'KNN':KNeighborsClassifier(n_jobs=4)
         'LSVM': LinearSVC(),
         # 'SVM': svm.SVC(),
         # 'NCC': NearestCentroid(),
@@ -131,7 +131,8 @@ def skl_validate(classifiers, vocabulary, emb_dictionary, embedding_size, dictio
     max_acc_name = None
     validation_files = get_files_and_domain(VALID_DIR, shuffle=False)
     # TODO togliei 100
-    docs_test_set, labels = fetch_docs_with_labels(validation_files[:500], 'I_DO_NOT_EXIST', caching=False)
+    docs_test_set, labels = fetch_docs_with_labels(validation_files, 'I_DO_NOT_EXIST', caching=False)
+    # docs_test_set, labels = fetch_docs_with_labels(validation_files[:500], 'I_DO_NOT_EXIST', caching=False)
     assert len(docs_test_set) == len(labels), "INVALID CALL"
     args = [docs_test_set, labels, vocabulary, emb_dictionary, embedding_size, dictionary, domains_centroid_max_min_vectors_dict]
     test_set, labels = docs2vec(docs2vec_words_peculiarity_weighted_centroid, *args)
@@ -177,10 +178,12 @@ def test_classifiers(name, classifier, vocabulary, emb_dictionary, embedding_siz
     answer_file = os.path.join(out_dir, file_name)
     test_files = get_files_and_domain(TEST_DIR, shuffle=False)
     # __import__('ipdb').set_trace()
-    for t_file, _ in test_files:
+    bar = tqdm.trange(len(test_files))
+    for step in bar:
+        t_file, _ = test_files[step]
         base_name = os.path.basename(t_file)
         t_id = base_name.split('_')[1].split('.')[0]
-        doc_test_file, _ = fetch_docs_with_labels([(t_file,_)], 'I_DO_NOT_EXIST', caching=False)
+        doc_test_file, _ = fetch_docs_with_labels([(t_file,_)], 'I_DO_NOT_EXIST', load_bar=False, caching=False)
         label = [None]
         args = [doc_test_file, label, vocabulary, emb_dictionary, embedding_size, dictionary, domains_centroid_max_min_vectors_dict]
         test, _ = docs2vec(docs2vec_words_peculiarity_weighted_centroid, *args)
@@ -369,7 +372,7 @@ def recover_execution_environment(exec_id):
     return vocabulary, vectors, dictionary, inv_dictionary, emb_dictionary, embedding_size
 
 
-def fetch_docs_with_labels(training_files, caching_directory, caching=True):
+def fetch_docs_with_labels(training_files, caching_directory, load_bar=True, caching=True):
     docs_training_set = None
     labels = None
     bak1 = os.path.join(caching_directory, "word_training_set" + ".pickle")
@@ -384,7 +387,12 @@ def fetch_docs_with_labels(training_files, caching_directory, caching=True):
         docs_training_set = []
         labels = []
         # print('fetch_docs_with_labels')
-        for i in tqdm.trange(len(training_files)):
+        bar = None
+        if load_bar:
+            bar = tqdm.trange(len(training_files))
+        else:
+            bar = range(len(training_files))
+        for i in bar:
             f, domain = training_files[i]
             file_sentences = data_from_file(f) #, num_file_words)
             docs_training_set.append(file_sentences)
