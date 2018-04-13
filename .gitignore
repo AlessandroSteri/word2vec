@@ -4,3 +4,4 @@ __pycache__/
 *.csv
 tsne.png
 log
+utils
