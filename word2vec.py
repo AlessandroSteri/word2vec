@@ -21,8 +21,8 @@ import pickle
 
 # run on CPU
 # comment this part if you want to run it on GPU
-# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
-# os.environ["CUDA_VISIBLE_DEVICES"] = ""
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 ### CONSTANTS ###
 TRAIN_DIR      = "dataset/DATA/TRAIN"
