@@ -1,4 +1,5 @@
 import os
+import sys
 from utils import LogTime
 from word2vec import get_files_and_domain, TRAIN_DIR, VALID_DIR, log
 from data_preprocessing import data_to_vocab
@@ -46,16 +47,18 @@ out_dir        = 'test_answ'
 #         self.emb_dictionary = emb_dictionary
 
 
-def main():
+def main(execution_id):
 
     # where to save test answers
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
     # Choose the execution with the best accuracy and retrieve environment via id
-    exec_id = '152346879468'
+    exec_id = str(execution_id)
 
     # were to dump objects
     caching_directory = os.path.join(domain_caching, exec_id)
+    if not os.path.exists(caching_directory):
+        os.makedirs(caching_directory)
 
     # LogTime: just an utility I defined to print time needed to complete indent block
     with LogTime('Get file paths'):
@@ -70,7 +73,7 @@ def main():
         # num_docs, domain_doc_number = get_domain_doc_stats()
     # training set (docs = sentences of words) and labels
     #TODO togli 500
-    docs_training_set, labels = fetch_docs_with_labels(training_files, caching_directory, caching=False)
+    docs_training_set, labels = fetch_docs_with_labels(training_files[:500], caching_directory, caching=False)
 
     # compute vocabulary of each domain
     ds_vocabs = domains_vocabularies(docs_training_set, labels, vocabulary, caching_directory)
@@ -128,7 +131,7 @@ def skl_validate(classifiers, vocabulary, emb_dictionary, embedding_size, dictio
     max_acc_name = None
     validation_files = get_files_and_domain(VALID_DIR, shuffle=False)
     # TODO togliei 100
-    docs_test_set, labels = fetch_docs_with_labels(validation_files, 'I_DO_NOT_EXIST', caching=False)
+    docs_test_set, labels = fetch_docs_with_labels(validation_files[:500], 'I_DO_NOT_EXIST', caching=False)
     assert len(docs_test_set) == len(labels), "INVALID CALL"
     args = [docs_test_set, labels, vocabulary, emb_dictionary, embedding_size, dictionary, domains_centroid_max_min_vectors_dict]
     test_set, labels = docs2vec(docs2vec_words_peculiarity_weighted_centroid, *args)
@@ -263,7 +266,7 @@ def peculiar_doc_words(doc_vocab, vocabulary):
 
 #TODO taken from slides
 def cosine_similarity(vec1, vec2):
-    #TODO handle bettere 00000
+    #TODO handle bettere 00000 i.e., vedi f vector generate random
     vec1 = np.asanyarray(vec1)
     vec2 = np.asanyarray(vec2)
     sim = np.sum(vec1*vec2) / (np.sqrt(np.sum(np.power(vec1, 2))) * np.sqrt(np.sum(np.power(vec2, 2))))
@@ -274,10 +277,11 @@ def cosine_similarity(vec1, vec2):
 
 def domains_centroid_max_min_vectors(ds_vocabs, vocabulary, embedding_size, emb_dictionary, caching_directory, caching=True):
     domains_centroid_max_min_vectors_dict = dict()
-    if caching and os.path.exists(caching_directory):
+    bak = os.path.join(caching_directory, "domains_centroid_max_min_vectors_dict" + ".pickle")
+    if caching and os.path.exists(bak):
         print('Loading domains_centroid_max_min_vectors_dict from previous same execution.')
         with LogTime('Loading domains_centroid_max_min_vectors_dict'):
-            with open(os.path.join(caching_directory, "domains_centroid_max_min_vectors_dict" + ".pickle"), 'rb') as f:
+            with open(bak, 'rb') as f:
                 domains_centroid_max_min_vectors_dict = pickle.load(f)
     else:
         for domain, domain_vocabulary in ds_vocabs.items():
@@ -295,7 +299,7 @@ def domains_centroid_max_min_vectors(ds_vocabs, vocabulary, embedding_size, emb_
             domains_centroid_max_min_vectors_dict[domain] = (d_centroid, d_max_vec, d_min_vec, d_avg_vec)
 
         #TODO undo true and uncommend mkdir
-        if caching and not os.path.exists(caching_directory):
+        if caching and not os.path.exists(bak):
             # os.makedirs(caching_directory)
             with LogTime('Caching domains_centroid_max_min_vectors_dict'):
                 with open(os.path.join(caching_directory, "domains_centroid_max_min_vectors_dict" + ".pickle"), 'wb') as f:
@@ -324,6 +328,7 @@ def mean_vector(vectors, weights, embedding_size):
 def pointwise_f_vector(vectors, embedding_size, f):
     pointwise_vector = [0] * embedding_size
     if len(vectors) == 0:
+        #TODO random vector instead of 00000?
         print('[ATTENTION]: found empty doc -> pointwise_vector is 0...0')
         return pointwise_vector
     for dim in range(embedding_size):
@@ -367,10 +372,11 @@ def recover_execution_environment(exec_id):
 def fetch_docs_with_labels(training_files, caching_directory, caching=True):
     docs_training_set = None
     labels = None
-    if caching and os.path.exists(caching_directory):
+    bak1 = os.path.join(caching_directory, "word_training_set" + ".pickle")
+    if caching and os.path.exists(bak1):
         print('Loading word_test_set and labels from previous same execution.')
         with LogTime('Loading docs_training_set and labels'):
-            with open(os.path.join(caching_directory, "word_training_set" + ".pickle"), 'rb') as f:
+            with open(bak1, 'rb') as f:
                 docs_training_set = pickle.load(f)
             with open(os.path.join(caching_directory, "labels" + ".pickle"), 'rb') as f:
                 labels = pickle.load(f)
@@ -384,7 +390,7 @@ def fetch_docs_with_labels(training_files, caching_directory, caching=True):
             docs_training_set.append(file_sentences)
             labels.append(domain)
 
-        if caching and not os.path.exists(caching_directory):
+        if caching and not os.path.exists(bak1):
             os.makedirs(caching_directory)
             with LogTime('Caching docs_training_set and labels'):
                 with open(os.path.join(caching_directory, "word_training_set" + ".pickle"), 'wb') as f:
@@ -433,10 +439,11 @@ def path_of(entity, exec_id, ext='.pickle'):
 
 # computes the dictionary: domain_name -> domain_vocabulary, of type str -> Counter
 def domains_vocabularies(docs_training_set, labels, vocabulary, caching_directory, caching=True):
-    if caching and os.path.exists(caching_directory):
+    bak = os.path.join(caching_directory, "ds_vocabs" + ".pickle")
+    if caching and os.path.exists(bak):
         print('Loading domains_vocabularies from previous same execution.')
         with LogTime('Loading domains_vocabularies'):
-            with open(os.path.join(caching_directory, "ds_vocabs" + ".pickle"), 'rb') as f:
+            with open(bak, 'rb') as f:
                 ds_vocabs = pickle.load(f)
     else:
         ds_vocabs = dict() # domain -> domain_vocabulary
@@ -451,10 +458,10 @@ def domains_vocabularies(docs_training_set, labels, vocabulary, caching_director
                     doc_vocab = docs_to_sub_vocab(doc_sentences, vocabulary)
                     domain_vocabulary += doc_vocab
                 ds_vocabs[domain] = domain_vocabulary
-        if caching and not os.path.exists(caching_directory):
+        if caching and not os.path.exists(bak):
             os.makedirs(caching_directory)
             with LogTime('Caching domains_vocabularies'):
-                with open(os.path.join(caching_directory, "ds_vocabs" + ".pickle"), 'wb') as f:
+                with open(bak, 'wb') as f:
                     pickle.dump(ds_vocabs, f, protocol=pickle.HIGHEST_PROTOCOL)
     return ds_vocabs
 
@@ -482,4 +489,9 @@ def get_domain_doc_stats():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main(sys.argv[1])
+    except IndexError as e:
+        print("Pass execution id as arg of {}".format(sys.argv[0]))
+        sys.exit(1)
+        # raise e
