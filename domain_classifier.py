@@ -1,6 +1,6 @@
 import os
 from utils import LogTime
-from word2vec import get_files_and_domain, TRAIN_DIR, VALID_DIR
+from word2vec import get_files_and_domain, TRAIN_DIR, VALID_DIR, log
 from data_preprocessing import data_to_vocab
 import pickle
 from collections import Counter
@@ -10,6 +10,7 @@ from statistics import mean
 import math
 from sklearn.neural_network import MLPClassifier
 from sklearn import svm
+from sklearn.svm import LinearSVC
 from sklearn.neighbors.nearest_centroid import NearestCentroid
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn import tree
@@ -18,10 +19,15 @@ from sklearn.metrics import f1_score
 from sklearn.metrics import confusion_matrix
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import VotingClassifier
+import copy
+from time import time
+import matplotlib.pyplot as plt
+from plot_confusion_matrix import plot_confusion_matrix
 
-TEST_DIR       = '' #TODO
+TEST_DIR       = "dataset/DATA/TEST"
 log_input_dir  = "./"
 domain_caching = './log/domain'
+out_dir        = 'test_answ'
 
 
 # TODO: post hw, riattiva autofolding in vimrc, unplug ycm and pymode (lento)
@@ -41,8 +47,12 @@ domain_caching = './log/domain'
 
 
 def main():
+
+    # where to save test answers
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
     # Choose the execution with the best accuracy and retrieve environment via id
-    exec_id = '152331714290'
+    exec_id = '152346879468'
 
     # were to dump objects
     caching_directory = os.path.join(domain_caching, exec_id)
@@ -55,7 +65,11 @@ def main():
     with LogTime('Restoring env'):
         vocabulary, vectors, dictionary, inv_dictionary, emb_dictionary, embedding_size = recover_execution_environment(exec_id)
 
+    # with LogTime('DOmain stats'):
+        # TODO use it samehow
+        # num_docs, domain_doc_number = get_domain_doc_stats()
     # training set (docs = sentences of words) and labels
+    #TODO togli 500
     docs_training_set, labels = fetch_docs_with_labels(training_files, caching_directory, caching=False)
 
     # compute vocabulary of each domain
@@ -74,26 +88,33 @@ def main():
     classifiers = train(training_set, labels)
 
     ### validation ###
-    skl_validate(classifiers, vocabulary, emb_dictionary, embedding_size, dictionary, domains_centroid_max_min_vectors_dict)
+    max_accuracy, max_acc_name = skl_validate(classifiers, vocabulary, emb_dictionary, embedding_size, dictionary, domains_centroid_max_min_vectors_dict)
+
+
+    ### test ###
+    test_classifiers(max_acc_name, classifiers[max_acc_name], vocabulary, emb_dictionary, embedding_size, dictionary, domains_centroid_max_min_vectors_dict, max_accuracy)
 
 def train(training_set, labels):
     print("[Training]")
     classifiers = {
         # 'MLP': MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(5, 2), random_state=1),
         'MLP2': MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(128, 40), random_state=1),
-        'KNN':KNeighborsClassifier(),
+        'KNN':KNeighborsClassifier(n_jobs=-1),
+        #TODO try 100 tree
         'RNDF':RandomForestClassifier(n_estimators=10, n_jobs =-1),
+        'RNDF50':RandomForestClassifier(n_estimators=50, n_jobs =-1),
         # 'KNN':KNeighborsClassifier(n_jobs=4)
-        #TODO uncomment svm
+        'LSVM': LinearSVC(),
         # 'SVM': svm.SVC(),
         # 'NCC': NearestCentroid(),
         # 'DTR': tree.DecisionTreeClassifier(),
-        'SGD': SGDClassifier(loss="hinge", penalty="l2"),
+        'SGD': SGDClassifier(loss="hinge", penalty="l2", n_jobs=-1),
         }
-    # use all classifiers as estimators
-    estimators = classifiers.items()
-    clf = VotingClassifier(estimators, n_jobs=-1)
-    classifiers['ENS'] = clf
+    # # use all classifiers as estimators
+    # estimators = copy.deepcopy([(n, c) for n, c in classifiers.items()])
+    # estimators = [(n, c) for n, c in classifiers.items()]
+    # clf = VotingClassifier(estimators, n_jobs=-1)
+    # classifiers['ENS'] = clf
     for name, classifier in classifiers.items():
         with LogTime("Training {}".format(name)):
             print("Training: {}".format(name))
@@ -102,21 +123,69 @@ def train(training_set, labels):
 
 
 def skl_validate(classifiers, vocabulary, emb_dictionary, embedding_size, dictionary, domains_centroid_max_min_vectors_dict):
-    validation_files = get_files_and_domain(VALID_DIR, shuffle=True)
+    print("[Validation]")
+    max_accuracy = -1
+    max_acc_name = None
+    validation_files = get_files_and_domain(VALID_DIR, shuffle=False)
     # TODO togliei 100
     docs_test_set, labels = fetch_docs_with_labels(validation_files, 'I_DO_NOT_EXIST', caching=False)
     assert len(docs_test_set) == len(labels), "INVALID CALL"
     args = [docs_test_set, labels, vocabulary, emb_dictionary, embedding_size, dictionary, domains_centroid_max_min_vectors_dict]
     test_set, labels = docs2vec(docs2vec_words_peculiarity_weighted_centroid, *args)
     assert len(test_set) == len(labels), "INVALID CALL"
+    domains_counter = Counter(labels)
+    class_names = list(domains_counter)
     for name, classifier in classifiers.items():
         with LogTime(name):
             predictions = classifier.predict(test_set)
             score = f1_score(labels, predictions, average='macro')
-            cm = confusion_matrix(labels, predictions)
-            print('[{}] Score: {}'.format(name, classifier.score(test_set, labels)))
+            score_w = f1_score(labels, predictions, average='weighted')
+
+            # Compute confusion matrix
+            cnf_matrix = confusion_matrix(labels, predictions)
+            np.set_printoptions(precision=2)
+
+            # Plot non-normalized confusion matrix
+            plt.figure()
+            plot_confusion_matrix(cnf_matrix, classes=class_names,
+                                  title='Confusion matrix, without normalization')
+
+            # Plot normalized confusion matrix
+            plt.figure()
+            plot_confusion_matrix(cnf_matrix, classes=class_names, normalize=True,
+                                  title='Normalized confusion matrix')
+
+            plt.savefig('confusion_matrix_' + name + '.png', format='png')
+            # plt.show()
+            with open('conf_matrix_{}.csv'.format(name), 'w') as f:
+                f.write(np.array2string(cnf_matrix, separator=','))
+            acc = classifier.score(test_set, labels)
+            if acc > max_accuracy:
+                max_accuracy = acc
+                max_acc_name = name
+            print('[{}] Score (accuracy): {}, F1_Score_w: {}, F1_Score: {}'.format(name, acc, score_w, score))
             print('[{}] F1 Score: \n{}'.format(name, score))
-            print('[{}] Confusion Matrix: \n{}'.format(name, cm))
+            print('[{}] Confusion Matrix: \n{}'.format(name, cnf_matrix))
+    return max_accuracy, max_acc_name
+
+def test_classifiers(name, classifier, vocabulary, emb_dictionary, embedding_size, dictionary, domains_centroid_max_min_vectors_dict, max_accuracy):
+    print("[Test]")
+    file_name = str(int(time())) + '_' + str(name) + '_' + str(max_accuracy) + '_test_answers.tsv'
+    answer_file = os.path.join(out_dir, file_name)
+    test_files = get_files_and_domain(TEST_DIR, shuffle=False)
+    # __import__('ipdb').set_trace()
+    for t_file, _ in test_files:
+        base_name = os.path.basename(t_file)
+        t_id = base_name.split('_')[1].split('.')[0]
+        doc_test_file, _ = fetch_docs_with_labels([(t_file,_)], 'I_DO_NOT_EXIST', caching=False)
+        label = [None]
+        args = [doc_test_file, label, vocabulary, emb_dictionary, embedding_size, dictionary, domains_centroid_max_min_vectors_dict]
+        test, _ = docs2vec(docs2vec_words_peculiarity_weighted_centroid, *args)
+        prediction = classifier.predict(test)
+        add_answer(t_id, prediction[0], answer_file)
+
+
+
 
 def docs2vec(to_vector, *args):
     training_set, labels = to_vector(*args)
@@ -308,7 +377,7 @@ def fetch_docs_with_labels(training_files, caching_directory, caching=True):
     else:
         docs_training_set = []
         labels = []
-        print('fetch_docs_with_labels')
+        # print('fetch_docs_with_labels')
         for i in tqdm.trange(len(training_files)):
             f, domain = training_files[i]
             file_sentences = data_from_file(f) #, num_file_words)
@@ -393,10 +462,24 @@ def docs_to_sub_vocab(doc_sentences, vocabulary):
     sub_vocab = Counter()
     for sentences in doc_sentences:
         for w in sentences:
-            # exludes out_of_vocab words i.e., unk
+            # excludes out_of_vocab words i.e., unk
             if vocabulary[w]:
                 sub_vocab[w] += 1
     return sub_vocab
+
+def add_answer(t_id, prediction, answer_file):
+    answer = '{}\t{}\n'.format(t_id, prediction)
+    log(answer_file, answer)
+
+def get_domain_doc_stats():
+    domain_doc_number = dict()
+    for domain in os.listdir(TRAIN_DIR):
+        if domain != '.DS_Store':
+            doc_num = len([f for f in os.listdir(os.path.join(TRAIN_DIR, domain))])
+            domain_doc_number[domain] = doc_num
+    num_docs = sum(domain_doc_number.values())
+    return num_docs, domain_doc_number
+
 
 if __name__ == '__main__':
     main()
