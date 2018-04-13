@@ -11,14 +11,13 @@ from time import time
 import ipdb
 import pickle
 
-# import pickle
 
 UNK = "<UNK>"
 UNK_INDEX = 0
 STOPWORDS_FILE = './stopwords2.txt'
 
-batch_time = 0
-batch_index = 0
+# batch_time = 0
+# batch_index = 0
 # training_pairs = 0
 # used_training_pairs = 0
 ### generate_batch ###
@@ -40,7 +39,7 @@ def generate_batch(batch_size, curr_sentence, curr_word, curr_context_word, wind
 
 
     ###FILL HERE###
-    global batch_time
+    # global batch_time
     # global batch_index
     # global training_pairs
     # global used_training_pairs
@@ -101,7 +100,7 @@ def generate_batch(batch_size, curr_sentence, curr_word, curr_context_word, wind
 
     stop = time()
     dur = stop - start
-    batch_time += dur
+    # batch_time += dur
     # print('time spent in batch: {}'.format(batch_time))
     return train_data, labels, processed_sentences,processed_words, processed_context_words
 
