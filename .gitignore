@@ -2,6 +2,6 @@ dataset/
 __pycache__/
 .ropeproject/
 *.csv
-tsne.png
+*.png
 log
 utils
