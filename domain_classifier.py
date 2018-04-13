@@ -391,7 +391,7 @@ def fetch_docs_with_labels(training_files, caching_directory, caching=True):
             labels.append(domain)
 
         if caching and not os.path.exists(bak1):
-            os.makedirs(caching_directory)
+            # os.makedirs(caching_directory)
             with LogTime('Caching docs_training_set and labels'):
                 with open(os.path.join(caching_directory, "word_training_set" + ".pickle"), 'wb') as f:
                     pickle.dump(docs_training_set, f, protocol=pickle.HIGHEST_PROTOCOL)
@@ -459,7 +459,7 @@ def domains_vocabularies(docs_training_set, labels, vocabulary, caching_director
                     domain_vocabulary += doc_vocab
                 ds_vocabs[domain] = domain_vocabulary
         if caching and not os.path.exists(bak):
-            os.makedirs(caching_directory)
+            # os.makedirs(caching_directory)
             with LogTime('Caching domains_vocabularies'):
                 with open(bak, 'wb') as f:
                     pickle.dump(ds_vocabs, f, protocol=pickle.HIGHEST_PROTOCOL)
