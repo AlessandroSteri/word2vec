@@ -33,26 +33,12 @@ out_dir        = 'test_answ'
 
 # TODO: post hw, riattiva autofolding in vimrc, unplug ycm and pymode (lento)
 
-# class Execution(object):
-#
-#     """Represents the environment of a word2vec.train() execution. """
-#
-#     def __init__(self, exec_id, embedding_size, vocabulary, vectors, dictionary, inv_dictionary, emb_dictionary):
-#         self.exec_id = exec_id
-#         self.embedding_size = embedding_size
-#         self.vocabulary = vocabulary
-#         self.vectors = vectors
-#         self.dictionary = dictionary
-#         self.inv_dictionary = inv_dictionary
-#         self.emb_dictionary = emb_dictionary
-
-
 def main(execution_id):
 
     # where to save test answers
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
-    # Choose the execution with the best accuracy and retrieve environment via id
+    # Execution id to retrieve environment via id and to cache data in custom folder
     exec_id = str(execution_id)
 
     # were to dump objects
@@ -60,30 +46,32 @@ def main(execution_id):
     if not os.path.exists(caching_directory):
         os.makedirs(caching_directory)
 
-    # LogTime: just an utility I defined to print time needed to complete indent block
+    # LogTime: just an utility I defined to print time needed to complete indent block for optimization purpose.
     with LogTime('Get file paths'):
-        # List of all the files in the training set along with their domains
+        # Shuffled list of all the files in the training set along with their domains
         training_files = get_files_and_domain(TRAIN_DIR, shuffle=True)
 
     with LogTime('Restoring env'):
+        # recover all the relevant objects from the choosen execution of word2vec.train()
         vocabulary, vectors, dictionary, inv_dictionary, emb_dictionary, embedding_size = recover_execution_environment(exec_id)
 
     # with LogTime('DOmain stats'):
         # TODO use it samehow
         # num_docs, domain_doc_number = get_domain_doc_stats()
-    # training set (docs = sentences of words) and labels
+
+    # fetches the training set in clear (docs = sentences of words) and labels
     #TODO togli 500
     # docs_training_set, labels = fetch_docs_with_labels(training_files, caching_directory, caching=False)
-    docs_training_set, labels = fetch_docs_with_labels(training_files[:3000], caching_directory, caching=False)
+    docs_training_set, labels = fetch_docs_with_labels(training_files[:10000], caching_directory, caching=False)
 
     # compute vocabulary of each domain
     ds_vocabs = domains_vocabularies(docs_training_set, labels, vocabulary, caching_directory)
 
-    # compute centroid, max and min pointwise vector for each domain
+    # TODO: ho tolto centroid di default, se passi param lo attivi con avg vedi cosa conviene, avg meno oneroso, centroid piu poreciso credo
+    # form domain vocabulary compute centroid, max and min pointwise vector for each domain: dict[domain] = (centr, min, max, avg)
     domains_centroid_max_min_vectors_dict = domains_centroid_max_min_vectors(ds_vocabs, vocabulary, embedding_size, emb_dictionary, caching_directory)
 
-
-    ### from word training set to vector training set ###
+    ### from word-made training set to embedding_vector-made training set ###
     #TODO togli 100
     args = [docs_training_set, labels, vocabulary, emb_dictionary, embedding_size, dictionary, domains_centroid_max_min_vectors_dict]
     training_set, labels = docs2vec(docs2vec_words_peculiarity_weighted_centroid, *args)
@@ -98,8 +86,11 @@ def main(execution_id):
     ### test ###
     test_classifiers(max_acc_name, classifiers[max_acc_name], vocabulary, emb_dictionary, embedding_size, dictionary, domains_centroid_max_min_vectors_dict, max_accuracy)
 
+
+# returns trained classifier in a dictionary name->trained_classifier
 def train(training_set, labels):
     print("[Training]")
+    # a buch of classifier to train
     classifiers = {
         # 'MLP': MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(5, 2), random_state=1),
         'MLP2': MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(128, 40), random_state=1),
@@ -114,11 +105,13 @@ def train(training_set, labels):
         'SGD': SGDClassifier(loss="hinge", penalty="l2", n_jobs=-1),
         }
     # # use all classifiers as estimators
+    # TODO: try again voting
     # estimators = copy.deepcopy([(n, c) for n, c in classifiers.items()])
     # estimators = [(n, c) for n, c in classifiers.items()]
     # clf = VotingClassifier(estimators, n_jobs=-1)
     # classifiers['ENS'] = clf
     for name, classifier in classifiers.items():
+        # log training time for each classifier
         with LogTime("Training {}".format(name)):
             print("Training: {}".format(name))
             classifier.fit(training_set, labels)
@@ -133,7 +126,7 @@ def skl_validate(classifiers, vocabulary, emb_dictionary, embedding_size, dictio
     validation_files = get_files_and_domain(VALID_DIR, shuffle=True)
     # TODO togliei 100
     # docs_test_set, labels = fetch_docs_with_labels(validation_files, 'I_DO_NOT_EXIST', caching=False)
-    docs_test_set, labels = fetch_docs_with_labels(validation_files[:500], 'I_DO_NOT_EXIST', caching=False)
+    docs_test_set, labels = fetch_docs_with_labels(validation_files[:2000], 'I_DO_NOT_EXIST', caching=False)
     assert len(docs_test_set) == len(labels), "INVALID CALL"
     args = [docs_test_set, labels, vocabulary, emb_dictionary, embedding_size, dictionary, domains_centroid_max_min_vectors_dict]
     test_set, labels = docs2vec(docs2vec_words_peculiarity_weighted_centroid, *args)
@@ -148,7 +141,7 @@ def skl_validate(classifiers, vocabulary, emb_dictionary, embedding_size, dictio
 
             # Compute confusion matrix
             cnf_matrix = confusion_matrix(labels, predictions)
-            np.set_printoptions(precision=2)
+            np.set_printoptions(threshold=np.nan)
 
             # Plot non-normalized confusion matrix
             plt.figure()
@@ -165,7 +158,8 @@ def skl_validate(classifiers, vocabulary, emb_dictionary, embedding_size, dictio
             plt.savefig('confusion_matrix_' + name + '.png', format='png')
             # plt.show()
             with open('conf_matrix_{}.csv'.format(name), 'w') as f:
-                np.savetxt(f, cnf_matrix.astype(int), delimiter=',')
+                # np.savetxt(f, cnf_matrix.astype(int), delimiter=',')
+                f.write(np.array2string(cnf_matrix, separator=','))
             # with open('conf_matrix_{}_norm.csv'.format(name), 'w') as f:
                 # np.savetxt(f, vectors, delimiter=',')
                 # f.write(np.array2string(cnf_matrix, separator=','))
@@ -184,17 +178,20 @@ def test_classifiers(name, classifier, vocabulary, emb_dictionary, embedding_siz
     answer_file = os.path.join(out_dir, file_name)
     test_files = get_files_and_domain(TEST_DIR, shuffle=False)
     # __import__('ipdb').set_trace()
-    bar = tqdm.trange(len(test_files))
+    bar = tqdm.trange(len(test_files[:500]))
     for step in bar:
         t_file, _ = test_files[step]
         base_name = os.path.basename(t_file)
-        t_id = base_name.split('_')[1].split('.')[0]
+        t_id = base_name.split('.')[0]
         doc_test_file, _ = fetch_docs_with_labels([(t_file,_)], 'I_DO_NOT_EXIST', load_bar=False, caching=False)
         label = [None]
         args = [doc_test_file, label, vocabulary, emb_dictionary, embedding_size, dictionary, domains_centroid_max_min_vectors_dict]
         test, _ = docs2vec(docs2vec_words_peculiarity_weighted_centroid, *args)
         prediction = classifier.predict(test)
         add_answer(t_id, prediction[0], answer_file)
+
+    print("TODO: no solo 500 test")
+    # __import__('ipdb').set_trace()
 
 
 
@@ -204,7 +201,7 @@ def docs2vec(to_vector, *args):
     return training_set, labels
 
 
-def docs2vec_words_peculiarity_weighted_centroid(docs_training_set, labels, vocabulary, emb_dictionary, embedding_size, dictionary, domains_centroid_max_min_vectors_dict):
+def docs2vec_words_peculiarity_weighted_centroid(docs_training_set, labels, vocabulary, emb_dictionary, embedding_size, dictionary, domains_centroid_max_min_vectors_dict, weighted=False):
     # print(len(docs_training_set), len(labels))
     assert len(docs_training_set) == len(labels), "INVALID INPUT"
     training_set = []
@@ -225,7 +222,9 @@ def docs2vec_words_peculiarity_weighted_centroid(docs_training_set, labels, voca
         except KeyError as e:
             print("not in emb_dict - should never be printed")
         try:
-            centroid = mean_vector(embedded_words, pecurliarities, embedding_size)
+            centroid = None
+            if weighted: centroid = mean_vector(embedded_words, pecurliarities, embedding_size)
+            else: centroid = avg_vector(embedded_words, embedding_size)
             max_vec = max_vector(embedded_words, embedding_size)
             min_vec = min_vector(embedded_words, embedding_size)
             # sorted cause I want it to be same order for all features
@@ -234,12 +233,11 @@ def docs2vec_words_peculiarity_weighted_centroid(docs_training_set, labels, voca
                 d_centroid, d_max_vec, d_min_vec, d_avg_vec = d_vectors
                 # TODO check if commutative
                 # __import__('ipdb').set_trace()
-                centroid_sim =  cosine_similarity(d_centroid, centroid)
+                centroid_sim = None
+                if weighted: centroid_sim = cosine_similarity(d_centroid, centroid)
+                else: centroid_sim = cosine_similarity(d_avg_vec, centroid)
                 max_sim =  cosine_similarity(d_max_vec, max_vec)
                 min_sim =  cosine_similarity(d_min_vec, min_vec)
-                inv_centroid_sim =  cosine_similarity(centroid, d_centroid)
-                assert inv_centroid_sim == centroid_sim
-                #TODO togli ^ is just to check
                 cos_sim_feat_vec += [centroid_sim, max_sim, min_sim]
 
             training_set.append(centroid + max_vec + min_vec + cos_sim_feat_vec)
@@ -341,7 +339,7 @@ def pointwise_f_vector(vectors, embedding_size, f):
         print('[ATTENTION]: found empty doc -> pointwise_vector is 0...0')
         return pointwise_vector
     for dim in range(embedding_size):
-        values = [vector[dim] for vector in vectors]
+        values = [float(vector[dim]) for vector in vectors]
         pointwise_vector[dim] = f(values)
     return pointwise_vector
 
