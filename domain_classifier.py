@@ -73,8 +73,8 @@ def main(execution_id):
         # num_docs, domain_doc_number = get_domain_doc_stats()
     # training set (docs = sentences of words) and labels
     #TODO togli 500
-    docs_training_set, labels = fetch_docs_with_labels(training_files, caching_directory, caching=False)
-    # docs_training_set, labels = fetch_docs_with_labels(training_files[:500], caching_directory, caching=False)
+    # docs_training_set, labels = fetch_docs_with_labels(training_files, caching_directory, caching=False)
+    docs_training_set, labels = fetch_docs_with_labels(training_files[:3000], caching_directory, caching=False)
 
     # compute vocabulary of each domain
     ds_vocabs = domains_vocabularies(docs_training_set, labels, vocabulary, caching_directory)
@@ -129,10 +129,11 @@ def skl_validate(classifiers, vocabulary, emb_dictionary, embedding_size, dictio
     print("[Validation]")
     max_accuracy = -1
     max_acc_name = None
-    validation_files = get_files_and_domain(VALID_DIR, shuffle=False)
+    # TODO CHECK IF OK SHUFFLING
+    validation_files = get_files_and_domain(VALID_DIR, shuffle=True)
     # TODO togliei 100
-    docs_test_set, labels = fetch_docs_with_labels(validation_files, 'I_DO_NOT_EXIST', caching=False)
-    # docs_test_set, labels = fetch_docs_with_labels(validation_files[:500], 'I_DO_NOT_EXIST', caching=False)
+    # docs_test_set, labels = fetch_docs_with_labels(validation_files, 'I_DO_NOT_EXIST', caching=False)
+    docs_test_set, labels = fetch_docs_with_labels(validation_files[:500], 'I_DO_NOT_EXIST', caching=False)
     assert len(docs_test_set) == len(labels), "INVALID CALL"
     args = [docs_test_set, labels, vocabulary, emb_dictionary, embedding_size, dictionary, domains_centroid_max_min_vectors_dict]
     test_set, labels = docs2vec(docs2vec_words_peculiarity_weighted_centroid, *args)
@@ -151,6 +152,7 @@ def skl_validate(classifiers, vocabulary, emb_dictionary, embedding_size, dictio
 
             # Plot non-normalized confusion matrix
             plt.figure()
+            plt.figure(figsize=(30,30))
             plot_confusion_matrix(cnf_matrix, classes=class_names,
                                   title='Confusion matrix, without normalization')
 
@@ -159,10 +161,14 @@ def skl_validate(classifiers, vocabulary, emb_dictionary, embedding_size, dictio
             plot_confusion_matrix(cnf_matrix, classes=class_names, normalize=True,
                                   title='Normalized confusion matrix')
 
+
             plt.savefig('confusion_matrix_' + name + '.png', format='png')
             # plt.show()
             with open('conf_matrix_{}.csv'.format(name), 'w') as f:
-                f.write(np.array2string(cnf_matrix, separator=','))
+                np.savetxt(f, cnf_matrix.astype(int), delimiter=',')
+            # with open('conf_matrix_{}_norm.csv'.format(name), 'w') as f:
+                # np.savetxt(f, vectors, delimiter=',')
+                # f.write(np.array2string(cnf_matrix, separator=','))
             acc = classifier.score(test_set, labels)
             if acc > max_accuracy:
                 max_accuracy = acc
