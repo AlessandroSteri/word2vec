@@ -26,7 +26,6 @@ from sklearn.ensemble import VotingClassifier
 import copy
 from time import time
 import matplotlib.pyplot as plt
-from plot_confusion_matrix import plot_confusion_matrix
 
 TEST_DIR       = "dataset/DATA/TEST"
 log_input_dir  = "./"
@@ -192,20 +191,6 @@ def skl_validate(classifiers, vocabulary, emb_dictionary, embedding_size, dictio
             cnf_matrix = confusion_matrix(labels, predictions)
             np.set_printoptions(threshold=np.nan)
 
-            # Plot non-normalized confusion matrix
-            plt.figure()
-            plt.figure(figsize=(30,30))
-            plot_confusion_matrix(cnf_matrix, classes=class_names,
-                                  title='Confusion matrix, without normalization')
-
-            # Plot normalized confusion matrix
-            plt.figure()
-            plot_confusion_matrix(cnf_matrix, classes=class_names, normalize=True,
-                                  title='Normalized confusion matrix')
-
-
-            plt.savefig(os.path.join(conf_matrix_dir, 'confusion_matrix_' + name + '.png'), format='png')
-            # plt.show()
             cm_file = os.path.join(conf_matrix_dir, 'conf_matrix_{}.csv'.format(name))
             with open(cm_file, 'w') as f:
                 # np.savetxt(f, cnf_matrix.astype(int), delimiter=',')
@@ -230,11 +215,6 @@ def test_classifiers(name, classifier, vocabulary, emb_dictionary, embedding_siz
     file_name = str(d_id) + '_' + str(name) + '_' + str(max_accuracy) + '_test_answers.tsv'
     answer_file = os.path.join(out_dir, file_name)
     test_files = get_files_and_domain(TEST_DIR, shuffle=False)
-    print(test_files[:10])
-    # if sort_test_answ:
-    #     test_files.sort()
-    #     print("Sorted test Files")
-    #     print(test_files[:10])
     # __import__('ipdb').set_trace()
     bar = None
     if num_test_file == -1:

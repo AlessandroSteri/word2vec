@@ -108,13 +108,4 @@ class evaluation():
     def plot(self):
         print('[ACCURACY:]')
         print(self.accuracy_log)
-        # iteration = range(len(self.accuracy_log))
-        # plt.figure(1)
-        # plt.plot(iteration, self.accuracy_log) #, time_opt, val_opt)
-        # plt.legend(('Iteration', 'Accuracy' ))
-        # plt.title('Compare')
-        # plt.ylabel('plant.vO')
-        # plt.xlabel('time')
-        # plt.show()
-
 

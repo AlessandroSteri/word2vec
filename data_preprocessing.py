@@ -16,48 +16,18 @@ UNK = "<UNK>"
 UNK_INDEX = 0
 STOPWORDS_FILE = './stopwords2.txt'
 
-# batch_time = 0
-# batch_index = 0
-# training_pairs = 0
-# used_training_pairs = 0
 ### generate_batch ###
 # This function generates the train data and label batch from the dataset.
-#
-### Parameters ### TODO: update con parametri nuovi
-# batch_size: the number of train_data,label pairs to produce per batch
-# curr_batch: the current batch number.
-# window_size: the size of the context
-# data: the dataset
-### Return values ###
-# train_data: train data for current batch
-# labels: labels for current batch
-# def generate_batch(batch_size, curr_batch, window_size, data):
 def generate_batch(batch_size, curr_sentence, curr_word, curr_context_word, window_size, data):
-    # print('Generate')
     train_data = []
     labels = []
 
-
-    ###FILL HERE###
-    # global batch_time
-    # global batch_index
-    # global training_pairs
-    # global used_training_pairs
-
-    # if curr_batch % 1000 == 0:
-    #     print("training_pairs: {}, used_training_pairs: {}".format(training_pairs,
-    #           used_training_pairs))
-    #     print('Batch time: {}'.format(batch_time))
-
     start = time()
-    # TODO: taken from slides
-    # for word_index, pivot_word in enumerate(data[batch_index:]):
 
     processed_sentences = curr_sentence
     processed_words = curr_word
     processed_context_words = curr_context_word
     while len(train_data) < batch_size:
-        # if len(train_data) == 5:
         # ipdb.set_trace()
         # print('Pivot:\n{}'.format(processed_words))
         sentence_index = processed_sentences % len(data)
@@ -69,14 +39,12 @@ def generate_batch(batch_size, curr_sentence, curr_word, curr_context_word, wind
             processed_context_words = 0
             continue
         else:
-            # print('inside sentence: {}'.format(processed_sentences))
             # Other words to process in current sentence
             window = None
             window = sentence[max(processed_words - window_size,0):min(processed_words + window_size,len(sentence)) + 1]
             # print('processed_words: {}, window_size:{}, len window:{}'.format(processed_words, window_size, len(window)))
             # print('Window: {}'.format(window))
             if processed_context_words == len(window):
-                # print('end window')
                 processed_words += 1
                 processed_context_words = 0
                 continue
@@ -87,7 +55,6 @@ def generate_batch(batch_size, curr_sentence, curr_word, curr_context_word, wind
                 pivot_word = sentence[processed_words]
                 # print('PW: {}, CW: {}'.format(pivot_word, context_word))
                 if pivot_word != UNK_INDEX and context_word != UNK_INDEX and context_word != pivot_word:
-                    # used_training_pairs += 1
                     train_data.append(pivot_word)
                     labels.append(context_word)
                     # print('Train data:\n{}'.format(train_data))
@@ -96,71 +63,10 @@ def generate_batch(batch_size, curr_sentence, curr_word, curr_context_word, wind
     train_data = np.asarray(train_data)
     labels = np.asarray(labels).reshape(batch_size,1)
 
-    # print("Train data shape: {}".format(train_data.shape))
-
     stop = time()
     dur = stop - start
-    # batch_time += dur
-    # print('time spent in batch: {}'.format(batch_time))
     return train_data, labels, processed_sentences,processed_words, processed_context_words
 
-    # for sentence in data[curr_sentence:]: # if last sentence?
-    #     # if len(sentence) == 1:
-    #         # continue
-    #     for pivot_word in sentence[curr_word:]:
-    #         # if len(train_data) >= batch_size:
-    #             # break
-    #         # batch_index = batch_index + 1 % len(data)
-    #         window = sentence[max(w_idx - window_size, 0):]
-    #         window = window[:min(w_idx + window_size, len(data))]
-    #         for context_word in window[curr_context_word:]:
-    #             if len(train_data) >= batch_size:
-    #                 # incrementi?
-    #                 break
-    #             training_pairs += 1
-    #             if pivot_word != UNK_INDEX and context_word != UNK_INDEX and context_word != pivot_word:
-    #                 used_training_pairs += 1
-    #                 train_data.append(pivot_word)
-    #                 labels.append(context_word)
-    #
-
-    # print("full_train_data: {}".format(len(full_train_data)))
-    # print("full_labels: {}".format(len(full_labels)))
-
-    # batch_start_index = batch_size*curr_batch
-    # print("batch_start_index {}".format(batch_start_index))
-    # batch_end_index   = (batch_size*curr_batch) + batch_size
-    # print("batch_end_index {}".format(batch_end_index))
-    # train_data        = full_train_data[batch_start_index:batch_end_index]
-    # labels            = full_labels[batch_start_index:batch_end_index]
-    # print("train_data: {}".format(train_data))
-    # print("labels: {}".format(labels))
-
-
-    # data_len = len(data)
-    # # curr_batch ranges from 0 to num_step-1
-    # start = (curr_batch * batch_size) % data_len  # start is included in this batch
-    #
-    # # catch for current batch from data (as circular buffer)
-    # batch = []
-    # for i in range(batch_size):
-    #     # i = 0...batch_size-1
-    #     index = (start + i) % data_len
-    #     batch.append(data[index])
-    #
-    # train_data = []
-    # labels = []
-    # # TODO: taken from slides
-    # for word_index, word in enumerate(batch):
-    #     for nb_word in batch[max(word_index - window_size, 0): min(word_index + window_size, len(batch)) + 1]:
-    #         if nb_word != word:
-    #             x, y = skip_gram(word, nb_word)
-    #             train_data.append(x)
-    #             labels.append(y)
-    #
-    # print("Train data len: {}".format(len(train_data)))
-    # train_data = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 ]
-    # labels = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 ]
 
 
 ### build_dataset ###
@@ -187,7 +93,6 @@ def build_dataset(sentences, vocab_size, execution_id):
     start = time()
     vocab = data_to_vocab(sentences)
     print("Data to vocab: {}".format(time() - start))
-    #TODO: taken from course slides^
 
     # save vocab to csv file
     start = time()
@@ -260,7 +165,7 @@ def read_analogies(file, dictionary):
     print("Skipped: ", questions_skipped)
     return np.array(questions, dtype=np.int32)
 
-### LOADING STOPWORDS ### #TODO: taken from course slides
+### LOADING STOPWORDS ###
 def get_stopwords(file):
     return set([w.rstrip('\r\n') for w in open(file)])
 
@@ -289,9 +194,6 @@ def apply_dictionary(x_list, dictionary, unk_key):
 
 ### MY HELPER FUNCTIONS ###
 def data_to_vocab(sentences):
-    # stopwords_file = './stopwords2.txt'
-    # stopwords_file = './stopwords_full.txt'
-    #TODO: taken from course slides:
     stopwords = get_stopwords(STOPWORDS_FILE)
     vocab = collections.Counter()
     # tokenizer = nltk.tokenizer.casual.casual
@@ -315,10 +217,6 @@ def data_to_vocab(sentences):
 
             char_to_take_of = set(string.punctuation)
             # allow word like new york
-            # TODO: remove -.
-            # char_to_take_of.pop('-')
-            # allow u.s.a.
-            # char_to_take_of.pop('.')
             w_no_char = "".join(char for char in w if char not in char_to_take_of)
             if '..' not in w_no_char:
                 w_no_char =  w_no_char.rstrip('-.').lstrip('-.')
@@ -329,13 +227,10 @@ def data_to_vocab(sentences):
 
 
             if len(w_no_char) <= 2 or w_no_char in stopwords:
-                # remove most of stop words, remove also up which is ineresting
-                # print('[build_dataset] Word with less than 2: {}'.format(w))
                 continue
             vocab[w_no_char] += 1
-    # print("Distinct words: ", len(vocab))
     return vocab
-    ###
+
 
 def vocab_to_csv(vocab, vocab_size, execution_id):
     file_name = os.path.join('./log/vocab', str(execution_id) + '.csv')
@@ -346,34 +241,21 @@ def vocab_to_csv(vocab, vocab_size, execution_id):
 
 
 def get_training_set_coverage(batch_size, num_steps, training_set_cardinality):
-    # global training_pairs
-    # global used_training_pairs
     coverage =  (batch_size * num_steps * 100) / training_set_cardinality
     epoch =  (batch_size * num_steps) / training_set_cardinality
-    # coverage_unk = training_pairs * 100 / training_set_cardinality
     training_pairs = batch_size * num_steps
     return training_pairs, epoch, coverage, training_set_cardinality
 
 def compute_training_set_cardinality(window_size, data):
-    # if curr_batch % 1000 == 0:
-    #     print("training_pairs: {}, used_training_pairs: {}".format(training_pairs,
-    #           used_training_pairs))
-    #     print('Batch time: {}'.format(batch_time))
     num_training_pairs = 0
-    # training_pairs_not_unk = 0
     start = time()
-    # while len(train_data) < batch_size:
     for sentence in data:
-            # print('inside sentence: {}'.format(processed_sentences))
             # Other words to process in current sentence
         for pivot_word in sentence:
-            # window = None
             window = sentence[max(pivot_word - window_size, 0):min(pivot_word + window_size, len(sentence)) + 1]
             for context_word in window:
-                # training_pairs += 1
                 if pivot_word != UNK_INDEX and context_word != UNK_INDEX and context_word != pivot_word:
                     num_training_pairs += 1
-                    # used_training_pairs += 1
 
     stop = time()
     dur = stop - start

@@ -236,48 +236,34 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
 
         ### FILL HERE ###{{{
 
-        # TODO:                 taken from slides
-        embeddings            = tf.Variable(tf.random_uniform([vocabulary_size, embedding_size], -1.0, 1.0))
-        # ^ was embeddings    = tf.Variable() #placeholder variable
-        # emb_bias            = tf.Variable(tf.random_normal(EMBEDDING_SIZE)) #placeholder variable
-        # TODO:                 taken from slides
-        # selects column from index instead of product
-        hidden_representation = tf.nn.embedding_lookup(embeddings, train_inputs)
+        embeddings = tf.Variable(tf.random_uniform([vocabulary_size, embedding_size], -1.0, 1.0))
+        selector = tf.nn.embedding_lookup(embeddings, train_inputs)
 
-        nce_weights = tf.Variable(tf.truncated_normal([vocabulary_size, embedding_size], stddev=1.0 / math.sqrt(embedding_size)))
-        # TODO:       just inverted dimension acccording to google
-        # W2        = tf.Variable(tf.random_normal([VOCABULARY_SIZE, EMBEDDING_SIZE]))
-        # output    = tf.matmul(hidden_representation, W2)
-        nce_biases  = tf.Variable(tf.zeros([vocabulary_size]))
+        nce_w = tf.Variable(tf.truncated_normal([vocabulary_size, embedding_size], stddev=1.0 / math.sqrt(embedding_size)))
+        nce_b  = tf.Variable(tf.zeros([vocabulary_size]))
 
         ### }}}
 
         with tf.name_scope('loss'):
-            # TODO: taken from slides
-            # was: loss = None ### FILL HERE ###
-            # loss = tf.losses.sparse_softmax_cross_entropy(train_labels, output)
             loss = tf.reduce_mean(tf.nn.nce_loss(
-                weights=nce_weights,
-                biases=nce_biases,
+                weights=nce_w,
+                biases=nce_b,
                 labels=train_labels,
-                inputs=hidden_representation,
+                inputs=selector,
                 num_sampled=neg_samples,
                 num_classes=vocabulary_size))
 
         # Add the loss value as a scalar to summary.
         tf.summary.scalar('loss', loss)
 
-        # Construct the SGD optimizer using a learning rate of 1.0.
         with tf.name_scope('optimizer'):
-            # TODO: taken from slides
-            # was: optimizer = None ###FILL HERE ###
             decay_learning_rate = None
             if not decay and not linear_decay:
                 # constant learning rate
                     optimizer = tf.train.AdagradOptimizer(learning_rate).minimize(loss)
                 # optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss)
             else:
-                # decay
+                # decay lr
                 global_step = tf.Variable(0, trainable=False)
                 intitial_learning_rate = learning_rate
                 decay_step = int(step_rate[0])  #100000
@@ -345,11 +331,6 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
             curr_sentence = cs
             curr_word = cw
             curr_context_word = ccw
-
-            ### {{{
-            # for x, y in zip(batch_inputs, batch_labels):
-                # print("[ {}, {} ]".format(reverse_dictionary[x],reverse_dictionary[y]))
-            ### }}}
 
             # Define metadata variable.
             run_metadata = tf.RunMetadata()
@@ -433,12 +414,11 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
         it_stop = time.time()
         final_embeddings = normalized_embeddings.eval()
 
-        # my function but is commented cause works only using gui on mbp
+        # my function but is commented cause works only using gui
         eval.plot()
 
         final_relative_accuracy = eval.accuracy_log[-1]
         num_questions = eval.questions.shape[0]
-        # final_absolute_accuracy = final_relative_accuracy / (eval.questions.shape[0])
 
         avg_iteraz_sec = num_steps / (it_stop - it_start)
 
@@ -450,7 +430,7 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
             log_learning_rate(execution_id, learning_rate_over_time)
 
         ### SAVE VECTORS ###
-        if final_relative_accuracy > 5000:
+        if final_relative_accuracy > 7000:
             save_vectors(final_embeddings, execution_id)
 
         # Write corresponding labels for the embeddings.
@@ -470,13 +450,7 @@ def train(batch_size, embedding_size, window_size, neg_samples, vocabulary_size,
 
     writer.close()
 
-    # tsne = TSNE(perplexity=30, n_components=2, init='pca', n_iter=5000, method='exact')
-    # plot_only = 500
-    # low_dim_embs = tsne.fit_transform(final_embeddings[:plot_only, :])
-    # labels = [reverse_dictionary[i] for i in range(plot_only)]
-    # plot_with_labels(low_dim_embs, labels, os.path.join('./', 'tsne.png'))
     # pdb.set_trace()
-
 
     return final_relative_accuracy, acc_perc, avg_iteraz_sec, final_avg_loss, coverage_data
 
@@ -543,39 +517,6 @@ def get_files_and_domain(directory, shuffle=False):
         # stop = time.time()
         # print('Shuffle: ', stop-start)
     return files
-
-# def data_from_file(file_name, num_file_words=-1):
-#     limit = num_file_words
-#     sentences = []
-#     with open(file_name, 'r') as f:
-#         for line in f.readlines():
-#             split = line.lower().strip().split()
-#             if limit > 0 and limit - len(split) < 0:
-#                 split = split[:limit]
-#             elif limit != -1:
-#                 limit -= len(split)
-#             if limit >= 0 or limit == -1:
-#                 sentences.append(split)
-#             # print(sentences)
-#     return sentences
-
-# Function to draw visualization of distance between embeddings.
-def plot_with_labels(low_dim_embs, labels, filename):
-    assert low_dim_embs.shape[0] >= len(labels), 'More labels than embeddings'
-    plt.figure(figsize=(18, 18))  # in inches
-    for i, label in enumerate(labels):
-        x, y = low_dim_embs[i, :]
-        plt.scatter(x, y)
-        plt.annotate(
-                    label,
-                    xy=(x, y),
-                    xytext=(5, 2),
-                    textcoords='offset points',
-                    ha='right',
-                    va='bottom'
-                    )
-        plt.savefig(filename)
-
 
 # appends text_to_log to log_file
 def log(log_file, text_to_log):
