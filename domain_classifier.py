@@ -17,6 +17,8 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn import tree
 from sklearn.linear_model import SGDClassifier
 from sklearn.metrics import f1_score
+from sklearn.metrics import recall_score
+from sklearn.metrics import precision_score
 from sklearn.metrics import confusion_matrix
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import VotingClassifier
@@ -34,6 +36,15 @@ out_dir        = 'test_answ'
 # TODO: post hw, riattiva autofolding in vimrc, unplug ycm and pymode (lento)
 
 def main(execution_id):
+    #TODO togli 500 a testfile
+
+    # log
+    d_id = int(time())
+    # TODO fai caching in base a num training file
+    num_training_file = 5000
+    num_validation_file = 100
+    to_log = 'Domain Execution: {}, num_training_file: {}, num_validation_file: {}\n'.format(d_id, num_training_file, num_validation_file)
+    log(os.path.join(out_dir, 'log.txt'), to_log)
 
     # where to save test answers
     if not os.path.exists(out_dir):
@@ -41,10 +52,20 @@ def main(execution_id):
     # Execution id to retrieve environment via id and to cache data in custom folder
     exec_id = str(execution_id)
 
-    # were to dump objects
-    caching_directory = os.path.join(domain_caching, exec_id)
+    # were to dump objects which depends both on embeddings and num_files
+    caching_directory = os.path.join(domain_caching, exec_id, str(num_training_file))
     if not os.path.exists(caching_directory):
         os.makedirs(caching_directory)
+
+    # keep track of confusion matrixes
+    conf_matrix_dir = 'test_answ/conf_matrix/{}'.format(d_id)
+    if not os.path.exists(conf_matrix_dir):
+        os.makedirs(conf_matrix_dir)
+
+    # were to dump objects which depends only on num_files
+    caching_num_tr_files_directory = os.path.join(domain_caching, str(num_training_file))
+    if not os.path.exists(caching_num_tr_files_directory):
+        os.makedirs(caching_num_tr_files_directory)
 
     # LogTime: just an utility I defined to print time needed to complete indent block for optimization purpose.
     with LogTime('Get file paths'):
@@ -55,17 +76,18 @@ def main(execution_id):
         # recover all the relevant objects from the choosen execution of word2vec.train()
         vocabulary, vectors, dictionary, inv_dictionary, emb_dictionary, embedding_size = recover_execution_environment(exec_id)
 
-    # with LogTime('DOmain stats'):
+    # with LogTime('Domain stats'):
         # TODO use it samehow
         # num_docs, domain_doc_number = get_domain_doc_stats()
 
     # fetches the training set in clear (docs = sentences of words) and labels
     #TODO togli 500
     # docs_training_set, labels = fetch_docs_with_labels(training_files, caching_directory, caching=False)
-    docs_training_set, labels = fetch_docs_with_labels(training_files[:10000], caching_directory, caching=False)
+    docs_training_set, labels = fetch_docs_with_labels(training_files[:num_training_file], caching_num_tr_files_directory, caching=False)
 
-    # compute vocabulary of each domain
-    ds_vocabs = domains_vocabularies(docs_training_set, labels, vocabulary, caching_directory)
+    # compute vocabulary of each domain, caching indipendent from execution used
+    vocab_caching_dir = os.path.join(domain_caching, str(num_training_file))
+    ds_vocabs = domains_vocabularies(docs_training_set, labels, vocabulary, vocab_caching_dir)
 
     # TODO: ho tolto centroid di default, se passi param lo attivi con avg vedi cosa conviene, avg meno oneroso, centroid piu poreciso credo
     # form domain vocabulary compute centroid, max and min pointwise vector for each domain: dict[domain] = (centr, min, max, avg)
@@ -79,13 +101,21 @@ def main(execution_id):
     ### traing various model ###
     classifiers = train(training_set, labels)
 
+
     ### validation ###
-    max_accuracy, max_acc_name = skl_validate(classifiers, vocabulary, emb_dictionary, embedding_size, dictionary, domains_centroid_max_min_vectors_dict)
+    max_accuracy, max_acc_name = skl_validate(classifiers, vocabulary, emb_dictionary, embedding_size, dictionary, domains_centroid_max_min_vectors_dict, num_validation_file, conf_matrix_dir)
+
+    if max_accuracy > 0.7:
+        with LogTime('Caching classifiers'):
+            with open(os.path.join(caching_directory, "classifier_{}_acc_{}_ntf_{}_nvf_{}".format(max_acc_name, max_accuracy, num_training_file, num_validation_file) + ".pickle"), 'wb') as f:
+                pickle.dump(classifiers[max_acc_name], f, protocol=pickle.HIGHEST_PROTOCOL)
 
 
     ### test ###
     test_classifiers(max_acc_name, classifiers[max_acc_name], vocabulary, emb_dictionary, embedding_size, dictionary, domains_centroid_max_min_vectors_dict, max_accuracy)
 
+    to_log = '##################################### DONE ######################################\n'
+    log(os.path.join(out_dir, 'log.txt'), to_log)
 
 # returns trained classifier in a dictionary name->trained_classifier
 def train(training_set, labels):
@@ -118,26 +148,45 @@ def train(training_set, labels):
     return classifiers
 
 
-def skl_validate(classifiers, vocabulary, emb_dictionary, embedding_size, dictionary, domains_centroid_max_min_vectors_dict):
+# validate classifier on dev set to tune hyperparameters, select best classifier and compute f1, conf matrix and accuracy
+def skl_validate(classifiers, vocabulary, emb_dictionary, embedding_size, dictionary, domains_centroid_max_min_vectors_dict, num_validation_file, conf_matrix_dir):
     print("[Validation]")
+    # keep track of best classifier
     max_accuracy = -1
     max_acc_name = None
     # TODO CHECK IF OK SHUFFLING
     validation_files = get_files_and_domain(VALID_DIR, shuffle=True)
     # TODO togliei 100
     # docs_test_set, labels = fetch_docs_with_labels(validation_files, 'I_DO_NOT_EXIST', caching=False)
-    docs_test_set, labels = fetch_docs_with_labels(validation_files[:2000], 'I_DO_NOT_EXIST', caching=False)
+    docs_test_set, labels = fetch_docs_with_labels(validation_files[:num_validation_file], 'I_DO_NOT_EXIST', caching=False)
     assert len(docs_test_set) == len(labels), "INVALID CALL"
     args = [docs_test_set, labels, vocabulary, emb_dictionary, embedding_size, dictionary, domains_centroid_max_min_vectors_dict]
     test_set, labels = docs2vec(docs2vec_words_peculiarity_weighted_centroid, *args)
     assert len(test_set) == len(labels), "INVALID CALL"
     domains_counter = Counter(labels)
     class_names = list(domains_counter)
+    classifiers_stats = dict()
     for name, classifier in classifiers.items():
         with LogTime(name):
+            domains = list(set(labels))
             predictions = classifier.predict(test_set)
+            err = sum(1 for pr, lb in zip(predictions, labels) if pr != lb)
+            precision = (err / len(predictions))*100
             score = f1_score(labels, predictions, average='macro')
             score_w = f1_score(labels, predictions, average='weighted')
+            score_d = f1_score(labels, predictions, average=None, labels=domains)
+            recall = recall_score(labels, predictions, average='weighted')
+            recall_d = recall_score(labels, predictions, average=None, labels=domains)
+            precision_d = precision_score(labels, predictions, average=None, labels=domains)
+            precision_w = precision_score(labels, predictions, average='weighted')
+            precision_mi = precision_score(labels, predictions, average='micro')
+            precision_ma = precision_score(labels, predictions, average='macro')
+            classifiers_stats[name] = (name, score, score_w, recall, precision, precision_w, precision_mi, precision_ma)
+            stats = '\t[{}] f1: {}, f1_w: {}, recall: {}, my_prec: {}, prec_w: {}, prec_mic: {}, prec_mac: {}\n'.format(name, score, score_w, recall, precision, precision_w, precision_mi, precision_ma)
+            log(os.path.join(out_dir, 'log.txt'), stats)
+            for d, f1, rc, pr in zip(domains, score_d, recall_d, precision_d):
+                log(os.path.join(out_dir, 'log.txt'), '\t\t[{}] F1: {}, Recall: {}, Precision: {}\n'.format(d, f1, rc, pr))
+
 
             # Compute confusion matrix
             cnf_matrix = confusion_matrix(labels, predictions)
@@ -155,9 +204,10 @@ def skl_validate(classifiers, vocabulary, emb_dictionary, embedding_size, dictio
                                   title='Normalized confusion matrix')
 
 
-            plt.savefig('confusion_matrix_' + name + '.png', format='png')
+            plt.savefig(os.path.join(conf_matrix_dir, 'confusion_matrix_' + name + '.png'), format='png')
             # plt.show()
-            with open('conf_matrix_{}.csv'.format(name), 'w') as f:
+            cm_file = os.path.join(conf_matrix_dir, 'conf_matrix_{}.csv'.format(name))
+            with open(cm_file, 'w') as f:
                 # np.savetxt(f, cnf_matrix.astype(int), delimiter=',')
                 f.write(np.array2string(cnf_matrix, separator=','))
             # with open('conf_matrix_{}_norm.csv'.format(name), 'w') as f:
@@ -169,7 +219,10 @@ def skl_validate(classifiers, vocabulary, emb_dictionary, embedding_size, dictio
                 max_acc_name = name
             print('[{}] Score (accuracy): {}, F1_Score_w: {}, F1_Score: {}'.format(name, acc, score_w, score))
             print('[{}] F1 Score: \n{}'.format(name, score))
-            print('[{}] Confusion Matrix: \n{}'.format(name, cnf_matrix))
+            print('[{}] f1: {}, f1_w: {}, recall: {}, my_prec: {}, prec_w: {}, prec_mic: {}, prec_mac: {}\n'.format(name, score, score_w, recall, precision, precision_w, precision_mi, precision_ma))
+            # print('[{}] Confusion Matrix: \n{}'.format(name, cnf_matrix))
+    stats = '\tBEST CLASSIFIER [{}] f1: {}, f1_w: {}, recall: {}, my_prec: {}%, prec_w: {}, prec_mic: {}, prec_mac: {}\n'.format(*classifiers_stats[max_acc_name])
+    log(os.path.join(out_dir, 'log.txt'), stats)
     return max_accuracy, max_acc_name
 
 def test_classifiers(name, classifier, vocabulary, emb_dictionary, embedding_size, dictionary, domains_centroid_max_min_vectors_dict, max_accuracy):
