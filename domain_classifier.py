@@ -41,8 +41,8 @@ def main(execution_id):
     # log
     d_id = int(time())
     # TODO fai caching in base a num training file
-    num_training_file = 5000
-    num_validation_file = 100
+    num_training_file = -1
+    num_validation_file = -1
     to_log = 'Domain Execution: {}, num_training_file: {}, num_validation_file: {}\n'.format(d_id, num_training_file, num_validation_file)
     log(os.path.join(out_dir, 'log.txt'), to_log)
 
@@ -231,7 +231,7 @@ def test_classifiers(name, classifier, vocabulary, emb_dictionary, embedding_siz
     answer_file = os.path.join(out_dir, file_name)
     test_files = get_files_and_domain(TEST_DIR, shuffle=False)
     # __import__('ipdb').set_trace()
-    bar = tqdm.trange(len(test_files[:500]))
+    bar = tqdm.trange(len(test_files))
     for step in bar:
         t_file, _ = test_files[step]
         base_name = os.path.basename(t_file)
